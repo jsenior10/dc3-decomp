@@ -223,7 +223,7 @@
             "system/char/CharLookAt.cpp": "MISSING",
             "system/char/CharMeshHide.cpp": "MISSING",
             "system/char/CharMirror.cpp": "MISSING",
-            "system/char/CharNeckTwist.cpp": "MISSING",
+            "system/char/CharNeckTwist.cpp": "NonMatching",
             "system/char/CharPollGroup.cpp": "MISSING",
             "system/char/CharPosConstraint.cpp": "NonMatching",
             "system/char/CharServoBone.cpp": "MISSING",
@@ -242,7 +242,7 @@
             "system/char/ClipGraphGen.cpp": "MISSING",
             "system/char/FileMerger.cpp": "MISSING",
             "system/char/FileMergerOrganizer.cpp": "MISSING",
-            "system/char/Waypoint.cpp": "MISSING",
+            "system/char/Waypoint.cpp": "NonMatching",
 
             "system/flow/DrivenPropertyEntry.cpp": "NonMatching",
             "system/flow/DrivenPropertyMathOps.cpp": "NonMatching",
