@@ -88,6 +88,8 @@ public:
     void MergeDraws(const Character *);
     void FindInterestObjects(ObjectDir *);
     void EnableBlinks(bool, bool);
+    void SetSelfShadow(bool selfshadow) { mSelfShadow = selfshadow; }
+    void SetLodType(LODType lod) { mForceLod = lod; }
 
     static void Init();
 

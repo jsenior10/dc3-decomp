@@ -20,3 +20,5 @@ protected:
 
     std::map<Symbol, float> unk4; // 0x4
 };
+
+extern PropertyEventProvider *TheHamProvider;

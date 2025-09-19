@@ -168,20 +168,21 @@ public:
     // CamShot
     virtual void SetPreFrame(float, float) {}
     virtual CamShot *CurrentShot() { return nullptr; }
-    virtual bool CheckShotStarted();
-    virtual bool CheckShotOver(float);
 
     OBJ_MEM_OVERLOAD(0xAD)
     NEW_OBJ(CamShot)
 
     float GetDurationSeconds() const;
     bool PlatformOk() const;
+    void StartAnims(ObjPtrList<RndAnimatable> &);
 
 protected:
     CamShot();
 
     static Hmx::Object *sAnimTarget;
 
+    virtual bool CheckShotStarted();
+    virtual bool CheckShotOver(float);
     // these three could be re-ordered, unsure of current order rn
     virtual void ApplyDynamicOffsetPreLookAt(Transform &, bool) {}
     virtual void ApplyDynamicOffsetPostLookAt(Transform &) {}
