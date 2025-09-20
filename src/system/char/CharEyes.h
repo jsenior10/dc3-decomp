@@ -6,6 +6,7 @@
 #include "char/CharPollable.h"
 #include "char/CharWeightSetter.h"
 #include "char/CharWeightable.h"
+#include "obj/Data.h"
 #include "obj/Object.h"
 #include "rndobj/Highlight.h"
 #include "rndobj/Overlay.h"
@@ -16,7 +17,17 @@
 class CharEyes : public RndHighlightable, public CharWeightable, public CharPollable {
 public:
     struct EyeDesc {
-        EyeDesc(Hmx::Object *);
+        EyeDesc(Hmx::Object *owner)
+            : mEye(owner), mUpperLid(owner), mLowerLid(owner), mLowerLidBlink(owner),
+              mUpperLidBlink(owner) {}
+        EyeDesc &operator=(const EyeDesc &desc) {
+            mEye = desc.mEye;
+            mUpperLid = desc.mUpperLid;
+            mLowerLid = desc.mLowerLid;
+            mUpperLidBlink = desc.mUpperLidBlink;
+            mLowerLidBlink = desc.mLowerLidBlink;
+            return *this;
+        }
 
         /** "Eye to retarget" */
         ObjOwnerPtr<CharLookAt> mEye; // 0x0
@@ -60,8 +71,14 @@ public:
     OBJ_MEM_OVERLOAD(0x20)
     NEW_OBJ(CharEyes)
 
+    void ForceBlink();
+
 protected:
     CharEyes();
+
+    DataNode OnAddInterest(DataArray *);
+    DataNode OnToggleForceFocus(DataArray *);
+    DataNode OnToggleInterestOverlay(DataArray *);
 
     /** "globally disables eye darts for all characters" */
     static bool sDisableEyeDart;
@@ -109,12 +126,9 @@ protected:
     float mLowerLidTrackDown; // 0xc8
     /** "if checked, lower lid tracking is done by rotation instead of translation" */
     bool mLowerLidTrackRotate; // 0xcc
-    RndOverlay *unkd0;
+    RndOverlay *mEyeStatusOverlay; // 0xd0
     int mInterestFilterFlags; // 0xd4
-    float unkd8;
-    float unkdc;
-    float unke0;
-    int unke4;
+    Vector3 unkd8; // 0xd8
     int unke8;
     float unkec;
     float unkf0;
@@ -126,10 +140,7 @@ protected:
     ObjPtr<CharInterest> unk114; // 0x114
     int unk128;
     bool unk12c;
-    float unk130;
-    float unk134;
-    float unk138;
-    int unk13c;
+    Vector3 unk130;
     float unk140;
     CharEyeDartRuleset::EyeDartRulesetData mData; // 0x144
     bool unk170;

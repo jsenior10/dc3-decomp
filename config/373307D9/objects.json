@@ -217,7 +217,7 @@
             "system/char/CharIKRod.cpp": "MISSING",
             "system/char/CharIKScale.cpp": "MISSING",
             "system/char/CharIKSliderMidi.cpp": "MISSING",
-            "system/char/CharInterest.cpp": "MISSING",
+            "system/char/CharInterest.cpp": "NonMatching",
             "system/char/CharLipSync.cpp": "NonMatching",
             "system/char/CharLipSyncDriver.cpp": "NonMatching",
             "system/char/CharLookAt.cpp": "NonMatching",
