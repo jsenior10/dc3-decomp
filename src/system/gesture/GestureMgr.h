@@ -84,6 +84,7 @@ public:
         RndMat *mat = mLiveCamInput->GetSnapshot(idx);
         return mat ? mat->GetDiffuseTex() : nullptr;
     }
+    bool InControllerMode() const { return mInControllerMode; }
 
     static bool sIdentityOpInProgress;
     static void Init();

@@ -7,9 +7,11 @@
 #include "utl/Str.h"
 
 class HamPlayerData : public Hmx::Object {
+    friend class HamGameData;
+
 public:
     HamPlayerData(int);
-    // HamPlayerData
+    // Hmx::Object
     virtual ~HamPlayerData() {}
     virtual DataNode Handle(DataArray *, bool);
     virtual bool SyncProperty(DataNode &, DataArray *, int, PropOp);
