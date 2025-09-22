@@ -313,7 +313,7 @@
             "system/gesture/WaveToTurnOnLight.cpp": "NonMatching",
 
             "system/hamobj/BustAMoveData.cpp": "MISSING",
-            "system/hamobj/CamShotCatVO.cpp": "MISSING",
+            "system/hamobj/CamShotCatVO.cpp": "NonMatching",
             "system/hamobj/CharCameraInput.cpp": "MISSING",
             "system/hamobj/CharFeedback.cpp": "NonMatching",
             "system/hamobj/ClipPlayer.cpp": "MISSING",
