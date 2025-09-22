@@ -32,8 +32,10 @@ Symbol StrToCrewSym(String str) {
     }
 }
 
-void CamShotVOData(Symbol s, Symbol &s1, Symbol &s2, Symbol &s3, Symbol &s4) {
-    s1 = s2 = s3 = s4 = gNullStr;
+void CamShotVOData(
+    Symbol s, Symbol &s1, Symbol &charSym, Symbol &crewSym, Symbol &winLevelSym
+) {
+    s1 = charSym = crewSym = winLevelSym = gNullStr;
     static Symbol INTRO_CAM_CATS("INTRO_CAM_CATS");
     static Symbol OUTRO_CAM_CATS("OUTRO_CAM_CATS");
     static Symbol intro_quick("intro_quick");
@@ -63,38 +65,42 @@ void CamShotVOData(Symbol s, Symbol &s1, Symbol &s2, Symbol &s3, Symbol &s4) {
             static Symbol INTRO_SKILLS_LONG("INTRO_SKILLS_LONG");
             static Symbol INTRO_PLAYLIST("INTRO_PLAYLIST");
             if (s == INTRO_QUICK) {
-                s2 = all;
+                s1 = intro_quick;
+                charSym = all;
             } else if (s == INTRO_SKILLS || s == INTRO_SKILLS_LONG) {
                 s1 = intro_skills;
-            } else if (s != INTRO_PLAYLIST) {
-                s2 = all;
-            } else if (subStrings.size() != 0) {
+                charSym = all;
+            } else if (s == INTRO_PLAYLIST) {
+                s1 = intro_playlist;
+                charSym = all;
+            } else if (subStrings.size() > 0) {
                 if (subStrings[0] == "BATTLE") {
-                    s2 = all;
-                    s3 = StrToCrewSym(subStrings[2]);
+                    s1 = battle_intro_crew;
+                    charSym = all;
+                    crewSym = StrToCrewSym(subStrings[2]);
                 } else if (subStrings[0] == "CAMP") {
                     s1 = camp_intro_crew;
-                    s2 = all;
+                    charSym = all;
                 }
             }
             if (s1.Null()) {
                 MILO_NOTIFY("Unknown intro category %s", s);
             }
         } else if (hasOutros) {
-            if (subStrings.size() != 0 && subStrings[0] == "BATTLE") {
+            if (subStrings.size() > 0 && subStrings[0] == "BATTLE") {
                 s1 = battle_outro_crew;
-                s3 = StrToCrewSym(subStrings[2]);
+                crewSym = StrToCrewSym(subStrings[2]);
             } else if (subStrings.size() > 1 && subStrings[1] == "CAMP") {
                 if (subStrings[0] == "WIN") {
                     s1 = win_camp_crew;
-                    s2 = all;
+                    charSym = all;
                 } else if (subStrings[0] == "LOSE") {
                     s1 = lose_camp_char;
                     if (subStrings.size() > 2) {
-                        s2 = StrToCharacterSym(subStrings[2]);
-                        String s2Str(s2);
+                        charSym = StrToCharacterSym(subStrings[2]);
+                        String s2Str(charSym);
                         if (s2Str.contains("robot")) {
-                            s2 = all;
+                            charSym = all;
                         }
                     } else {
                         MILO_NOTIFY("Could not find character in %s", s);
@@ -107,10 +113,10 @@ void CamShotVOData(Symbol s, Symbol &s1, Symbol &s2, Symbol &s3, Symbol &s4) {
                 static Symbol WIN_HYPE_DIFF_CREW("WIN_HYPE_DIFF_CREW");
                 if (s == WIN_HYPE_SOLO) {
                     s1 = win_hype_solo;
-                    s2 = active;
+                    charSym = active;
                 } else {
                     s1 = s == WIN_HYPE_DIFF_CREW ? win_hype_diff_crew : win_hype_crew;
-                    s2 = all;
+                    charSym = all;
                 }
             } else if (subStrings.size() > 2) {
                 if (subStrings[2] == "DLG") {
@@ -129,14 +135,14 @@ void CamShotVOData(Symbol s, Symbol &s1, Symbol &s2, Symbol &s3, Symbol &s4) {
                 static Symbol med("med");
                 static Symbol high("high");
                 if (strd0 == low || strd0 == med || strd0 == high) {
-                    s4 = strd0.c_str();
+                    winLevelSym = strd0.c_str();
                 }
             }
-            if (s4.Null()) {
+            if (winLevelSym.Null()) {
                 MILO_NOTIFY("Couldn't find win level for %s", s);
             }
             if (subStrings.size() > 3) {
-                s2 = StrToCharacterSym(subStrings[3]);
+                charSym = StrToCharacterSym(subStrings[3]);
             } else {
                 MILO_NOTIFY("Couldn't find character for %s", s);
             }
