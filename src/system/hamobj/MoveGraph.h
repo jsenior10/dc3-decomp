@@ -44,7 +44,7 @@ public:
     MoveGraph &operator=(const MoveGraph &);
 
 private:
-    std::map<Symbol, MoveParent *> unk2c; // 0x2c
+    std::map<Symbol, MoveParent *> mMoveParents; // 0x2c
     std::map<Symbol, MoveVariant *> mMoveVariants; // 0x44
     DataArrayPtr mLayoutData; // 0x5c
 };
@@ -71,6 +71,8 @@ public:
     Difficulty GetDifficulty() const { return mDifficulty; }
 
 private:
+    void PopulateAdjacentParents();
+
     Symbol unk4; // 0x4
     Difficulty mDifficulty; // 0x8
     bool unkc; // 0xc
@@ -107,6 +109,7 @@ class MoveVariant {
     friend class MoveCandidate;
 
 public:
+    MoveVariant() {}
     MoveVariant(MoveGraph *, DataArray *, MoveParent *);
     MoveVariant(MoveGraph *, const MoveVariant *, MoveParent *);
     ~MoveVariant();
@@ -116,6 +119,8 @@ public:
     bool IsRest() const;
     void CacheLinks(MoveGraph *);
     void Load(BinStream &, MoveGraph *, MoveParent *);
+    Symbol Name() const { return mVariantName; }
+    bool IsFinalPose() const { return mFlags & 8; }
 
 private:
     Vector3 mPositionOffset; // 0x0

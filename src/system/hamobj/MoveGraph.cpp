@@ -30,18 +30,19 @@ BEGIN_LOADS(MoveGraph)
         }
         MoveParent *parent = new MoveParent();
         parent->Load(bs, this);
-        unk2c[parent->unk4] = parent;
+        mMoveParents[parent->unk4] = parent;
     }
     CacheLinks();
     mLayoutData->Load(bs);
 END_LOADS
 
 void MoveGraph::Clear() {
-    for (std::map<Symbol, MoveParent *>::iterator it = unk2c.begin(); it != unk2c.end();
+    for (std::map<Symbol, MoveParent *>::iterator it = mMoveParents.begin();
+         it != mMoveParents.end();
          ++it) {
         RELEASE(it->second);
     }
-    unk2c.clear();
+    mMoveParents.clear();
     mMoveVariants.clear();
 }
 
@@ -52,18 +53,32 @@ void MoveGraph::ImportMoveData(DataArray *pMoveData) {
         MILO_ASSERT(pParentConfig, 0x57);
         MoveParent *pParent = new MoveParent(this, pParentConfig);
         MILO_ASSERT(pParent, 0x5A);
-        unk2c[pParent->unk4] = pParent;
+        mMoveParents[pParent->unk4] = pParent;
         for (std::vector<MoveVariant *>::iterator it = pParent->mVariants.begin();
              it != pParent->mVariants.end();
              ++it) {
+            mMoveVariants[(*it)->Name()] = *it;
         }
     }
     CacheLinks();
 }
 
 void MoveGraph::CacheLinks() {
-    for (std::map<Symbol, MoveParent *>::iterator it = unk2c.begin(); it != unk2c.end();
+    for (std::map<Symbol, MoveParent *>::iterator it = mMoveParents.begin();
+         it != mMoveParents.end();
          ++it) {
         it->second->CacheLinks(this);
     }
+}
+
+MoveVariant *MoveGraph::FindNonConstMoveByVariantName(Symbol name) const {
+    std::map<Symbol, MoveVariant *>::const_iterator it = mMoveVariants.find(name);
+    if (it != mMoveVariants.end())
+        return it->second;
+    else
+        return nullptr;
+}
+
+const MoveVariant *MoveGraph::FindMoveByVariantName(Symbol name) const {
+    return FindNonConstMoveByVariantName(name);
 }

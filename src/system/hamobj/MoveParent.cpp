@@ -3,6 +3,8 @@
 #include "math/Rand.h"
 #include "obj/Data.h"
 #include "os/Debug.h"
+#include "utl/BinStream.h"
+#include <set>
 
 MoveParent::MoveParent() {}
 MoveParent::MoveParent(const MoveParent *other) {
@@ -82,4 +84,90 @@ bool MoveParent::HasPrevAdjacent(const MoveParent *parent) const {
             return true;
     }
     return false;
+}
+
+bool MoveParent::HasGenre(Symbol genre) const {
+    for (int i = 0; i < mGenreFlags.size(); i++) {
+        if (mGenreFlags[i] == genre)
+            return true;
+    }
+    return false;
+}
+
+bool MoveParent::HasEra(Symbol era) const {
+    for (int i = 0; i < mEraFlags.size(); i++) {
+        if (mEraFlags[i] == era)
+            return true;
+    }
+    return false;
+}
+
+bool MoveParent::HasCategory(Symbol cat) const { return HasGenre(cat) || HasEra(cat); }
+
+bool MoveParent::HasFinalMoveVariant() const {
+    for (std::vector<MoveVariant *>::const_iterator it = mVariants.begin();
+         it != mVariants.end();
+         ++it) {
+        if ((*it)->IsFinalPose())
+            return true;
+    }
+    return false;
+}
+
+bool MoveParent::HasRestMoveVariant() const {
+    for (std::vector<MoveVariant *>::const_iterator it = mVariants.begin();
+         it != mVariants.end();
+         ++it) {
+        if ((*it)->IsRest())
+            return true;
+    }
+    return false;
+}
+
+void MoveParent::PopulateAdjacentParents() {
+    std::set<const MoveParent *> set1;
+    std::set<const MoveParent *> set2;
+}
+
+void MoveParent::CacheLinks(MoveGraph *graph) {
+    for (std::vector<MoveVariant *>::iterator it = mVariants.begin();
+         it != mVariants.end();
+         ++it) {
+        (*it)->CacheLinks(graph);
+    }
+    PopulateAdjacentParents();
+}
+
+void MoveParent::Load(BinStream &bs, MoveGraph *graph) {
+    int rev;
+    bs >> rev;
+    bs >> unk4;
+    int diff;
+    bs >> diff;
+    mDifficulty = (Difficulty)diff;
+    int numFlags;
+    bs >> numFlags;
+    mGenreFlags.reserve(numFlags);
+    for (int i = 0; i < numFlags; i++) {
+        Symbol genre;
+        bs >> genre;
+        mGenreFlags.push_back(genre);
+    }
+    bs >> numFlags;
+    mEraFlags.reserve(numFlags);
+    for (int i = 0; i < numFlags; i++) {
+        Symbol era;
+        bs >> era;
+        mEraFlags.push_back(era);
+    }
+    bs >> unkc;
+    String str;
+    bs >> str;
+    bs >> numFlags;
+    mVariants.reserve(numFlags);
+    for (int i = 0; i < numFlags; i++) {
+        MoveVariant *var = new MoveVariant();
+        var->Load(bs, graph, this);
+        mVariants.push_back(var);
+    }
 }
