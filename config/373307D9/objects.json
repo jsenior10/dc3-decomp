@@ -364,7 +364,7 @@
             "system/hamobj/HamWardrobe.cpp": "MISSING",
             "system/hamobj/HollaBackMinigame.cpp": "MISSING",
             "system/hamobj/MeterDisplay.cpp": "MISSING",
-            "system/hamobj/MiniGameMgr.cpp": "MISSING",
+            "system/hamobj/MiniGameMgr.cpp": "NonMatching",
             "system/hamobj/MiniLeaderboardDisplay.cpp": "MISSING",
             "system/hamobj/MocapSkeletonIterator.cpp": "MISSING",
             "system/hamobj/MoveAsyncDetector.cpp": "MISSING",
