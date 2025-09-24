@@ -162,8 +162,8 @@ public:
     Hmx::Object *Owner() const { return mOwner; }
 };
 
-template <class T1>
-BinStream &operator<<(BinStream &bs, const ObjPtr<T1> &ptr);
+// template <class T1>
+// BinStream &operator<<(BinStream &bs, const ObjPtr<T1> &ptr);
 
 template <class T1>
 BinStream &operator>>(BinStream &bs, ObjPtr<T1> &ptr);
