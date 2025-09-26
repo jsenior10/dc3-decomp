@@ -334,7 +334,7 @@
             "system/hamobj/HamCamShot.cpp": "NonMatching",
             "system/hamobj/HamCamTransform.cpp": "MISSING",
             "system/hamobj/HamCharacter.cpp": "NonMatching",
-            "system/hamobj/HamDirector.cpp": "MISSING",
+            "system/hamobj/HamDirector.cpp": "NonMatching",
             "system/hamobj/HamDriver.cpp": "NonMatching",
             "system/hamobj/HamGameData.cpp": "NonMatching",
             "system/hamobj/HamIKEffector.cpp": "NonMatching",
