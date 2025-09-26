@@ -13,10 +13,11 @@ struct PoseOwner {
 
     Pose *pose; // 0x0
     Pose *holder; // 0x4
-    bool unk8; // 0x8
-    Symbol unkc; // 0xc
+    bool in_pose; // 0x8
+    Symbol name; // 0xc
 };
 
+/** "panel dir that handles the visualizer" */
 class HamVisDir : public SkeletonDir {
 public:
     // Hmx::Object
@@ -40,17 +41,23 @@ protected:
     HamVisDir();
 
     Transform unk284; // 0x284
-    FreestyleMotionFilter *unk2c4; // 0x2c4
+    FreestyleMotionFilter *mFilter; // 0x2c4
     bool unk2c8; // 0x2c8
     std::vector<unsigned int> unk2cc; // 0x2cc
     int unk2d8; // 0x2d8
     int unk2dc; // 0x2dc
-    ObjPtr<RndAnimatable> unk2e0; // 0x2e0
-    ObjPtr<RndAnimatable> unk2f4; // 0x2f4
-    ObjPtr<RndAnimatable> unk308; // 0x308
-    ObjPtr<RndAnimatable> unk31c; // 0x31c
-    bool unk330; // 0x330
+    /** "Animated from 0 - 100, depending on player one's hand height" */
+    ObjPtr<RndAnimatable> mPlayer1Right; // 0x2e0
+    /** "Animated from 0 - 100, depending on player one's hand height" */
+    ObjPtr<RndAnimatable> mPlayer1Left; // 0x2f4
+    /** "Animated from 0 - 100, depending on player two's hand height" */
+    ObjPtr<RndAnimatable> mPlayer2Right; // 0x308
+    /** "Animated from 0 - 100, depending on player two's hand height" */
+    ObjPtr<RndAnimatable> mPlayer2Left; // 0x31c
+    /** "Allow Milo anim bar to drive the gesture propanim frame,
+        not the player's skeleton." */
+    bool mMiloManualFrame; // 0x330
     float unk334; // 0x334
-    PoseOwner unk338[2]; // 0x338
-    PoseOwner unk358[2]; // 0x358
+    PoseOwner mSquatPoses[2]; // 0x338
+    PoseOwner mYPoses[2]; // 0x358
 };
