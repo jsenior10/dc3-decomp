@@ -37,12 +37,14 @@ public:
     OBJ_MEM_OVERLOAD(0x1D)
     NEW_OBJ(HamVisDir)
 
+    void Run(bool);
+
 protected:
     HamVisDir();
 
     Transform unk284; // 0x284
     FreestyleMotionFilter *mFilter; // 0x2c4
-    bool unk2c8; // 0x2c8
+    bool mRunning; // 0x2c8
     std::vector<unsigned int> unk2cc; // 0x2cc
     int unk2d8; // 0x2d8
     int unk2dc; // 0x2dc

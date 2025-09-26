@@ -15,7 +15,7 @@ PoseOwner::~PoseOwner() {
 }
 
 HamVisDir::HamVisDir()
-    : mFilter(0), unk2c8(0), unk2d8(0), unk2dc(0), mPlayer1Right(this),
+    : mFilter(0), mRunning(0), unk2d8(0), unk2dc(0), mPlayer1Right(this),
       mPlayer1Left(this), mPlayer2Right(this), mPlayer2Left(this), mMiloManualFrame(1),
       unk334(0) {
     SkeletonUpdateHandle handle = SkeletonUpdate::InstanceHandle();
@@ -121,3 +121,25 @@ BEGIN_PROPSYNCS(HamVisDir)
     SYNC_PROP(in_pose_y_1, mYPoses[1].in_pose)
     SYNC_SUPERCLASS(SkeletonDir)
 END_PROPSYNCS
+
+BEGIN_SAVES(HamVisDir)
+    SAVE_REVS(0xD, 0)
+    SAVE_SUPERCLASS(SkeletonDir)
+    bs << mMiloManualFrame;
+    bs << mPlayer1Left << mPlayer1Right;
+    bs << mPlayer2Left << mPlayer2Right;
+END_SAVES
+
+BEGIN_COPYS(HamVisDir)
+    COPY_SUPERCLASS(SkeletonDir)
+    CREATE_COPY(HamVisDir)
+    BEGIN_COPYING_MEMBERS
+        COPY_MEMBER(mMiloManualFrame)
+        COPY_MEMBER(mPlayer1Left)
+        COPY_MEMBER(mPlayer1Right)
+        COPY_MEMBER(mPlayer2Left)
+        COPY_MEMBER(mPlayer2Right)
+    END_COPYING_MEMBERS
+END_COPYS
+
+void HamVisDir::Run(bool run) { mRunning = run; }
