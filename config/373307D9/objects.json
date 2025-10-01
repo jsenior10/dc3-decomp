@@ -332,7 +332,7 @@
             "system/hamobj/HamAudio.cpp": "MISSING",
             "system/hamobj/HamBattleData.cpp": "MISSING",
             "system/hamobj/HamCamShot.cpp": "NonMatching",
-            "system/hamobj/HamCamTransform.cpp": "MISSING",
+            "system/hamobj/HamCamTransform.cpp": "NonMatching",
             "system/hamobj/HamCharacter.cpp": "NonMatching",
             "system/hamobj/HamDirector.cpp": "NonMatching",
             "system/hamobj/HamDriver.cpp": "NonMatching",

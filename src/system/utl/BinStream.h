@@ -205,6 +205,14 @@ public:
 };
 
 template <class E>
+BinStream &operator>>(BinStream &bs, BinStreamEnum<E> &e) {
+    int x;
+    bs >> x;
+    e.mEnum = (E)x;
+    return bs;
+}
+
+template <class E>
 BinStreamRev &operator>>(BinStreamRev &bs, BinStreamEnum<E> &e) {
     int x;
     bs.stream >> x;
