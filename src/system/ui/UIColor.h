@@ -9,7 +9,6 @@
  */
 class UIColor : public Hmx::Object {
 public:
-    virtual ~UIColor() {}
     OBJ_CLASSNAME(UIColor);
     OBJ_SET_TYPE(UIColor);
     virtual DataNode Handle(DataArray *, bool);

@@ -130,8 +130,9 @@ protected:
      * Example usage: {$this set_rendered}
      */
     DataNode OnSetRendered(const DataArray *);
+    DataNode OnSetSize(int, int);
 
-    int unk2c;
+    Hmx::CRC unk2c; // 0x2c
     /** The bitmap associated with this texture. */
     RndBitmap mBitmap; // 0x30
     float mMipMapK; // 0x50
