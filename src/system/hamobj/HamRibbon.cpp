@@ -119,7 +119,7 @@ void HamRibbon::ConstructMesh() {
             mMesh->SetBone(i, t, true);
             unk78.push_back(t);
         }
-        mMesh->SetNumVerts(mNumSides * mNumSegments * 2);
-        mMesh->SetNumFaces(mNumSides * mNumSegments * 2);
+        mMesh->Verts().resize(mNumSides * mNumSegments * 2);
+        mMesh->Faces().resize(mNumSides * mNumSegments * 2);
     }
 }

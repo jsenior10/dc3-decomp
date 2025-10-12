@@ -82,6 +82,10 @@ inline BinStream &operator<<(BinStream &bs, const Box &box) {
 class BSPNode {
 public:
     BSPNode() : left(nullptr), right(nullptr) {}
+    ~BSPNode() {
+        delete left;
+        delete right;
+    }
 
     POOL_OVERLOAD(BSPNode, 0x216);
 

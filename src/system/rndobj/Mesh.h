@@ -1,5 +1,7 @@
 #pragma once
 #include "math/Color.h"
+#include "math/Geo.h"
+#include "obj/Data.h"
 #include "obj/Object.h"
 #include "rndobj/Draw.h"
 #include "rndobj/Mat.h"
@@ -95,7 +97,7 @@ public:
         bool unkc;
     };
 
-    virtual ~RndMesh() {}
+    virtual ~RndMesh();
     virtual bool Replace(ObjRef *, Hmx::Object *);
     OBJ_CLASSNAME(Mesh);
     OBJ_SET_TYPE(Mesh);
@@ -132,14 +134,45 @@ public:
     void SetKeepMeshData(bool);
     void SetNumBones(int);
     void SetBone(int, RndTransformable *, bool);
-    void SetNumVerts(int verts) { mGeomOwner->mVerts.resize(verts); }
-    void SetNumFaces(int faces) { mGeomOwner->mFaces.resize(faces); }
+    VertVector &Verts() { return mGeomOwner->mVerts; }
+    std::vector<Face> &Faces() { return mGeomOwner->mFaces; }
+    Vert &Verts(int idx) { return mGeomOwner->mVerts[idx]; }
+    Face &Faces(int idx) { return mGeomOwner->mFaces[idx]; }
+    Volume GetVolume() const { return mGeomOwner->mVolume; }
+    void InstanceGeomOwnerBones();
+    void DeleteBones(bool);
+    void BurnXfm();
+    void ResetNormals();
+    void Tessellate();
+    void ClearAO();
+    void CopyGeometryFromOwner();
+    void Sync(int);
+    void SetVolume(Volume);
 
 protected:
     RndMesh();
 
     void ClearCompressedVerts();
     bool PatchOkay(int i, int j) { return i * 4.31 + j * 0.25 < 329.0; }
+    bool HasInstancedBones();
+    bool HasValidBones(unsigned int *) const;
+    void SetNumVerts(int verts);
+    void SetNumFaces(int faces) { mGeomOwner->mFaces.resize(faces); }
+
+    DataNode OnCompareEdgeVerts(const DataArray *);
+    DataNode OnAttachMesh(const DataArray *);
+    DataNode OnGetFace(const DataArray *);
+    DataNode OnSetFace(const DataArray *);
+    DataNode OnGetVertXYZ(const DataArray *);
+    DataNode OnSetVertXYZ(const DataArray *);
+    DataNode OnGetVertNorm(const DataArray *);
+    DataNode OnSetVertNorm(const DataArray *);
+    DataNode OnGetVertUV(const DataArray *);
+    DataNode OnSetVertUV(const DataArray *);
+    DataNode OnUnitizeNormals(const DataArray *);
+    DataNode OnBuildFromBSP(const DataArray *);
+    DataNode OnPointCollide(const DataArray *);
+    DataNode OnConfigureMesh(const DataArray *);
 
     /** This mesh's vertices. */
     VertVector mVerts; // 0x100
@@ -155,7 +188,7 @@ protected:
     int mMutable; // 0x160
     /** "Volume of the Mesh" */
     Volume mVolume; // 0x164
-    class BSPNode *mBSPTree; // 0x168
+    BSPNode *mBSPTree; // 0x168
     /** The MultiMesh that will draw this Mesh multiple times. */
     RndMultiMesh *mMultiMesh; // 0x16c
     bool unk170;

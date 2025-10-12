@@ -44,5 +44,5 @@ void PoolFree(int, void *mem, const char *file, int line, const char *name);
     }                                                                                    \
     static void *operator new(unsigned int s, void *place) { return place; }             \
     static void operator delete(void *v) {                                               \
-        PoolFree(sizeof(v), v, __FILE__, line_num, #class_name);                         \
+        PoolFree(sizeof(class_name), v, __FILE__, line_num, #class_name);                \
     }

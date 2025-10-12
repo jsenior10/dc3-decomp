@@ -1,32 +1,59 @@
 #include "rndobj/Mesh.h"
 #include "obj/Data.h"
+#include "obj/Object.h"
 #include "obj/PropSync.h"
 #include "os/Debug.h"
 #include "rndobj/Mat.h"
+#include "rndobj/MultiMesh.h"
 #include "utl/BinStream.h"
 #include "utl/Std.h"
 
-int RndMesh::EstimatedSizeKb() const {
-    // sizeof(Vert) is 0x50 here
-    // but the actual struct is size 0x60
-    return (NumVerts() * 0x50 + NumFaces() * sizeof(Face)) / 1024;
+RndMesh::RndMesh()
+    : mMat(this), mGeomOwner(this, this), mBones(this), mMutable(0),
+      mVolume(kVolumeTriangles), mBSPTree(nullptr), mMultiMesh(nullptr), unk170(0),
+      mKeepMeshData(0), mCompressedVerts(nullptr), mNumCompressedVerts(0) {
+    unk180 = 0x26;
 }
 
-void RndMesh::ClearCompressedVerts() {
-    RELEASE(mCompressedVerts);
-    mNumCompressedVerts = 0;
+RndMesh::~RndMesh() {
+    RELEASE(mBSPTree);
+    RELEASE(mMultiMesh);
+    ClearCompressedVerts();
 }
 
-BinStream &operator<<(BinStream &bs, const RndMesh::Face &face) {
-    bs << face.v1 << face.v2 << face.v3;
-    return bs;
-}
+BEGIN_HANDLERS(RndMesh)
+    HANDLE(compare_edge_verts, OnCompareEdgeVerts)
+    HANDLE(attach_mesh, OnAttachMesh)
+    HANDLE(get_face, OnGetFace)
+    HANDLE(set_face, OnSetFace)
+    HANDLE(get_vert_pos, OnGetVertXYZ)
+    HANDLE(set_vert_pos, OnSetVertXYZ)
+    HANDLE(get_vert_norm, OnGetVertNorm)
+    HANDLE(set_vert_norm, OnSetVertNorm)
+    HANDLE(get_vert_uv, OnGetVertUV)
+    HANDLE(set_vert_uv, OnSetVertUV)
+    HANDLE(unitize_normals, OnUnitizeNormals)
+    HANDLE(build_from_bsp, OnBuildFromBSP)
+    HANDLE(point_collide, OnPointCollide)
+    HANDLE(configure_mesh, OnConfigureMesh)
+    HANDLE_EXPR(estimated_size_kb, EstimatedSizeKb())
+    HANDLE_ACTION(instance_bones, InstanceGeomOwnerBones())
+    HANDLE_EXPR(has_instanced_bones, HasInstancedBones())
+    HANDLE_EXPR(has_bones, !mBones.empty())
+    HANDLE_ACTION(delete_bones, DeleteBones(_msg->Int(2)))
+    HANDLE_ACTION(burn_xfm, BurnXfm())
+    HANDLE_ACTION(reset_normals, ResetNormals())
+    HANDLE_ACTION(tessellate, Tessellate())
+    HANDLE_ACTION(clear_ao, ClearAO())
+    HANDLE_ACTION(clear_bones, mBones.clear())
+    HANDLE_ACTION(copy_geom_from_owner, CopyGeometryFromOwner())
+    HANDLE_SUPERCLASS(RndDrawable)
+    HANDLE_SUPERCLASS(RndTransformable)
+    HANDLE_SUPERCLASS(Hmx::Object)
+END_HANDLERS
 
-BinStream &operator<<(BinStream &bs, const RndMesh::Vert &vert) {
-    bs << vert.pos << vert.norm;
-    bs << vert.color << vert.tex << vert.boneWeights << vert.boneIndices[0]
-       << vert.boneIndices[1] << vert.boneIndices[2] << vert.boneIndices[3] << vert.unk50;
-    return bs;
+bool RndMesh::HasInstancedBones() {
+    return mGeomOwner && !mBones.empty() && mGeomOwner->mBones.Owner() == mBones.Owner();
 }
 
 BEGIN_CUSTOM_PROPSYNC(RndMesh::Vert)
@@ -37,58 +64,10 @@ BEGIN_CUSTOM_PROPSYNC(RndMesh::Vert)
     SYNC_PROP(tex, o.tex)
 END_CUSTOM_PROPSYNC
 
-void RndMesh::SetMat(RndMat *mat) { mMat = mat; }
-
-void RndMesh::SetGeomOwner(RndMesh *m) {
-    MILO_ASSERT(m, 0x1D7);
-    mGeomOwner = m;
-}
-
 BEGIN_CUSTOM_PROPSYNC(RndBone)
     SYNC_PROP(bone, o.mBone)
     SYNC_PROP(offset, o.mOffset)
 END_CUSTOM_PROPSYNC
-
-void RndMesh::SetKeepMeshData(bool keep) {
-    if (keep != mKeepMeshData) {
-        mKeepMeshData = keep;
-        if (!mKeepMeshData) {
-            mVerts.resize(0);
-            ClearAndShrink(mFaces);
-            ClearAndShrink(mPatches);
-        }
-    }
-}
-
-// void __thiscall RndMesh::SetKeepMeshData(RndMesh *this,bool param_1)
-
-// {
-//   Face *pFVar1;
-//   int iVar2;
-//   uchar *puVar3;
-//   StlNodeAlloc<> aSStack_28 [16];
-
-//   if ((param_1 != this[0x171]) && (this[0x171] = param_1, !param_1)) {
-//     VertVector::resize(this + 0x100,0);
-//     pFVar1 = *(this + 0x110);
-//     *(this + 0x110) = 0;
-//     *(this + 0x114) = 0;
-//     iVar2 = *(this + 0x118);
-//     *(this + 0x118) = 0;
-//     if (pFVar1 != 0x0) {
-//       stlpmtx_std::StlNodeAlloc<>::deallocate(aSStack_28,pFVar1,(iVar2 - pFVar1) / 6);
-//     }
-//     puVar3 = *(this + 0x130);
-//     *(this + 0x130) = 0;
-//     *(this + 0x134) = 0;
-//     iVar2 = *(this + 0x138);
-//     *(this + 0x138) = 0;
-//     if (puVar3 != 0x0) {
-//       stlpmtx_std::StlNodeAlloc<>::deallocate(aSStack_28,puVar3,iVar2 - puVar3);
-//     }
-//   }
-//   return;
-// }
 
 bool PropSync(
     RndMesh ::VertVector &vec, DataNode &node, DataArray *prop, int i, PropOp op
@@ -120,9 +99,65 @@ bool PropSync(
     }
 }
 
-RndMesh::RndMesh()
-    : mMat(this), mGeomOwner(this, this), mBones(this), mMutable(0),
-      mVolume(kVolumeTriangles), mBSPTree(nullptr), mMultiMesh(nullptr), unk170(0),
-      mKeepMeshData(0), mCompressedVerts(nullptr), mNumCompressedVerts(0) {
-    unk180 = 0x26;
+BEGIN_PROPSYNCS(RndMesh)
+    SYNC_PROP(mat, mMat)
+    SYNC_PROP_MODIFY(geom_owner, mGeomOwner, if (!mGeomOwner) mGeomOwner = this)
+    SYNC_PROP_BITFIELD(mutable, mGeomOwner->mMutable, 0xAA1)
+    SYNC_PROP_SET(num_verts, Verts().size(), SetNumVerts(_val.Int()))
+    SYNC_PROP_SET(num_faces, (int)Faces().size(), SetNumFaces(_val.Int()))
+    SYNC_PROP_SET(volume, GetVolume(), SetVolume((Volume)_val.Int()))
+    SYNC_PROP_SET(has_valid_bones, HasValidBones(nullptr), _val.Int())
+    SYNC_PROP(bones, mBones)
+    SYNC_PROP(has_ao_calculation, unk170)
+    SYNC_PROP_SET(keep_mesh_data, mKeepMeshData, SetKeepMeshData(_val.Int() > 0))
+    SYNC_PROP(verts, Verts())
+    SYNC_SUPERCLASS(RndTransformable)
+    SYNC_SUPERCLASS(RndDrawable)
+    SYNC_SUPERCLASS(Hmx::Object)
+END_PROPSYNCS
+
+int RndMesh::EstimatedSizeKb() const {
+    // sizeof(Vert) is 0x50 here
+    // but the actual struct is size 0x60
+    return (NumVerts() * 0x50 + NumFaces() * sizeof(Face)) / 1024;
+}
+
+void RndMesh::ClearCompressedVerts() {
+    RELEASE(mCompressedVerts);
+    mNumCompressedVerts = 0;
+}
+
+BinStream &operator<<(BinStream &bs, const RndMesh::Face &face) {
+    bs << face.v1 << face.v2 << face.v3;
+    return bs;
+}
+
+BinStream &operator<<(BinStream &bs, const RndMesh::Vert &vert) {
+    bs << vert.pos << vert.norm;
+    bs << vert.color << vert.tex << vert.boneWeights << vert.boneIndices[0]
+       << vert.boneIndices[1] << vert.boneIndices[2] << vert.boneIndices[3] << vert.unk50;
+    return bs;
+}
+
+void RndMesh::SetMat(RndMat *mat) { mMat = mat; }
+
+void RndMesh::SetGeomOwner(RndMesh *m) {
+    MILO_ASSERT(m, 0x1D7);
+    mGeomOwner = m;
+}
+
+void RndMesh::SetKeepMeshData(bool keep) {
+    if (keep != mKeepMeshData) {
+        mKeepMeshData = keep;
+        if (!mKeepMeshData) {
+            mVerts.resize(0);
+            ClearAndShrink(mFaces);
+            ClearAndShrink(mPatches);
+        }
+    }
+}
+
+void RndMesh::SetNumVerts(int num) {
+    Verts().resize(num);
+    Sync(0x3F);
 }
