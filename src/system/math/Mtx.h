@@ -1,4 +1,5 @@
 #pragma once
+#include "math/Sphere.h"
 #include "math/Vec.h"
 #include "math/Trig.h"
 #include "utl/BinStream.h"
@@ -281,6 +282,8 @@ public:
     class Plane bottom; // offset 0x50, size 0x10
 };
 
+bool operator>(const Sphere &, const Frustum &);
+
 void Normalize(const Hmx::Matrix3 &, Hmx::Matrix3 &);
 void Multiply(const Hmx::Matrix3 &, const Hmx::Matrix3 &, Hmx::Matrix3 &);
 void MultiplyInverse(const Transform &, const Transform &, Transform &);
@@ -329,3 +332,13 @@ inline void Scale(const Vector3 &vec, const Hmx::Matrix3 &mtx, Hmx::Matrix3 &res
 }
 
 float Det(const Hmx::Matrix3 &m);
+
+// is the sphere in front of or on the plane?
+inline bool operator>=(const Sphere &s, const Plane &p) {
+    return p.Dot(s.center) >= s.GetRadius();
+}
+
+// is the sphere behind the plane?
+inline bool operator<(const Sphere &s, const Plane &p) {
+    return p.Dot(s.center) < -s.GetRadius();
+}

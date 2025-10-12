@@ -34,6 +34,7 @@ public:
     void SetFrustum(float, float, float, float);
     Transform &LocalProjectXfm() { return mLocalProjectXfm; }
     RndTex *TargetTex() const { return mTargetTex; }
+    const Frustum &WorldFrustum() const { return mWorldFrustum; }
 
     NEW_OBJ(RndCam);
     OBJ_MEM_OVERLOAD(0x1B);

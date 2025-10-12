@@ -177,7 +177,7 @@ public:
 #ifdef MILO_DEBUG
 #define START_AUTO_TIMER_CALLBACK(name, func, context)                                   \
     static Timer *_t = AutoTimer::GetTimer(name);                                        \
-    AutoTimer _at(_t, 17.0f, func, context)
+    AutoTimer _at(_t, 50.0f, func, context)
 #else
 #define START_AUTO_TIMER_CALLBACK(name, func, context) (void)0
 #endif
