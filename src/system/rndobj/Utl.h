@@ -39,3 +39,5 @@ void RndSplasherSuspend();
 void RndSplasherResume();
 
 void MakeTangentsLate(RndMesh *);
+void CalcBox(RndMesh *, Box &);
+MatShaderOptions GetDefaultMatShaderOpts(const Hmx::Object *, RndMat *);

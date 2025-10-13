@@ -119,4 +119,9 @@ bool Intersect(const Segment &, const Sphere &);
 DataNode SetBSPParams(DataArray *da);
 void GeoInit();
 
+inline void CalcBoxCenter(Vector3 &center, const Box &box) {
+    Add(box.mMin, box.mMax, center);
+    Scale(center, 0.5f, center);
+}
+
 extern float gUnitsPerMeter;

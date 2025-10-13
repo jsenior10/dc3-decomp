@@ -82,6 +82,7 @@ public:
         mColor.alpha = a;
         mDirty |= 1;
     }
+    void SetShaderOpts(const MatShaderOptions &opts) { mShaderOptions = opts; }
 
     void SetColorMod(const Hmx::Color &, int);
     void SetSpecularMap(RndTex *);

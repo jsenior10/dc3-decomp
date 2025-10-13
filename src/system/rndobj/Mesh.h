@@ -122,9 +122,9 @@ public:
     virtual void SaveVertices(BinStream &);
     virtual void DrawFacesInRange(int, int) {}
     /** "Number of faces in the mesh" */
-    virtual int NumFaces() const;
+    virtual int NumFaces() const { return mFaces.size(); }
     /** "Number of verts in the mesh" */
-    virtual int NumVerts() const;
+    virtual int NumVerts() const { return mVerts.size(); }
     virtual void OnSync(int);
 
     OBJ_MEM_OVERLOAD(0x2E);
@@ -156,6 +156,9 @@ public:
     void CopyBones(const RndMesh *);
     void CopyGeometry(const RndMesh *, bool);
     void SetZeroWeightBones();
+    int CollidePlane(const RndMesh::Face &, const Plane &);
+    Vector3 SkinVertex(const RndMesh::Vert &, Vector3 *);
+    void ScaleBones(float);
 
 protected:
     RndMesh();
@@ -165,7 +168,7 @@ protected:
     bool HasInstancedBones();
     bool HasValidBones(unsigned int *) const;
     void SetNumVerts(int verts);
-    void SetNumFaces(int faces) { mGeomOwner->mFaces.resize(faces); }
+    void SetNumFaces(int faces);
     void RemoveInvalidBones();
 
     DataNode OnCompareEdgeVerts(const DataArray *);
@@ -182,6 +185,8 @@ protected:
     DataNode OnBuildFromBSP(const DataArray *);
     DataNode OnPointCollide(const DataArray *);
     DataNode OnConfigureMesh(const DataArray *);
+
+    static bool sRawCollide;
 
     /** This mesh's vertices. */
     VertVector mVerts; // 0x100

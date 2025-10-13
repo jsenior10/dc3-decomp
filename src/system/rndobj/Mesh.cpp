@@ -187,9 +187,57 @@ BEGIN_COPYS(RndMesh)
     Sync(0xBF);
 END_COPYS
 
-BinStreamRev &operator>>(BinStreamRev &, RndMesh::Vert &);
-BinStream &operator>>(BinStreamRev &, RndMesh::Face &);
-BinStream &operator>>(BinStream &, RndBone &);
+BinStreamRev &operator>>(BinStreamRev &d, RndMesh::Vert &vert) {
+    d.stream >> vert.pos;
+    float y, z;
+    if (d.rev != 10 && d.rev < 0x17) {
+        d.stream >> y;
+        d.stream >> z;
+    }
+    d.stream >> vert.norm;
+    if (d.rev < MESH_REV_SEP_COLOR)
+        d.stream >> vert.color;
+    else
+        d.stream >> vert.color;
+    d.stream >> vert.tex;
+    if (d.rev >= MESH_REV_SEP_COLOR) {
+        d.stream >> vert.boneWeights;
+    }
+    if (d.rev != 10 && d.rev < 23) {
+        vert.boneWeights.Set((1.0f - y) - z, y, z, 0);
+    }
+    if (d.rev < 0xB) {
+        Vector2 v;
+        d.stream >> v;
+    }
+    if (d.rev > 0x1C) {
+        d.stream >> vert.boneIndices[0];
+        d.stream >> vert.boneIndices[1];
+        d.stream >> vert.boneIndices[2];
+        d.stream >> vert.boneIndices[3];
+    }
+    if (d.rev > 0x1D) {
+        d.stream >> vert.unk50;
+    }
+    return d;
+}
+
+BinStream &operator>>(BinStreamRev &d, RndMesh::Face &face) {
+    d.stream >> face.v1;
+    d.stream >> face.v2;
+    d.stream >> face.v3;
+    if (d.rev < 1) {
+        Vector3 v;
+        d.stream >> v;
+    }
+    return d.stream;
+}
+
+BinStream &operator>>(BinStream &bs, RndBone &bone) {
+    bs >> bone.mBone;
+    bs >> bone.mOffset;
+    return bs;
+}
 
 template <class T1, class T2>
 BinStream &CachedRead(BinStream &, std::vector<T1, T2> &);
@@ -434,6 +482,175 @@ next:
     Sync(0xBF);
 END_LOADS
 
+TextStream &operator<<(TextStream &ts, RndMesh::Volume v) {
+    if (v == RndMesh::kVolumeEmpty)
+        ts << "Empty";
+    else if (v == RndMesh::kVolumeTriangles)
+        ts << "Triangles";
+    else if (v == RndMesh::kVolumeBSP)
+        ts << "BSP";
+    else if (v == RndMesh::kVolumeBox)
+        ts << "Box";
+    return ts;
+}
+
+void RndMesh::Print() {
+    TheDebug << "   mat: " << mMat << "\n";
+    TheDebug << "   geomOwner: " << mGeomOwner << "\n";
+    TheDebug << "   mutable: " << mMutable << "\n";
+    TheDebug << "   volume: " << mVolume << "\n";
+    TheDebug << "   bones: TODO\n";
+    TheDebug << "   geometry: TODO\n";
+}
+
+void RndMesh::UpdateSphere() {
+    Sphere s;
+    if (mBones.empty()) {
+        MakeWorldSphere(s, true);
+        Transform tf;
+        FastInvert(WorldXfm(), tf);
+        Multiply(s, tf, s);
+    } else
+        s.Zero();
+    RndDrawable::SetSphere(s);
+}
+
+float RndMesh::GetDistanceToPlane(const Plane &p, Vector3 &v) {
+    if (Verts().empty())
+        return 0;
+    else {
+        const Transform &world = WorldXfm();
+        Vector3 v58;
+        Multiply(Verts()[0].pos, world, v58);
+        v = v58;
+        float dot = p.Dot(v);
+        for (Vert *it = Verts().begin(); it != Verts().end(); ++it) {
+            Multiply(it->pos, world, v58);
+            float dotted = p.Dot(v58);
+            if (std::fabs(dotted) < std::fabs(dot)) {
+                dot = dotted;
+                v = v58;
+            }
+        }
+        return dot;
+    }
+}
+
+bool RndMesh::MakeWorldSphere(Sphere &s, bool b) {
+    if (b) {
+        if (mShowing) {
+            Box box;
+            CalcBox(this, box);
+            Vector3 v68;
+            CalcBoxCenter(v68, box);
+            s.Set(v68, 0);
+            const Transform &worldXfm = WorldXfm();
+            for (Vert *it = Verts().begin(); it != Verts().end(); ++it) {
+                Vector3 v50;
+                Multiply(it->pos, worldXfm, v50);
+                Vector3 v5c;
+                Subtract(v50, s.center, v5c);
+                s.radius = Max(s.GetRadius(), Dot(v5c, v5c));
+            }
+            s.radius = sqrtf(s.GetRadius());
+            return true;
+        }
+    } else if (mSphere.GetRadius()) {
+        Multiply(mSphere, WorldXfm(), s);
+        return true;
+    }
+    return false;
+}
+
+void RndMesh::Mats(std::list<RndMat *> &mats, bool) {
+    if (mMat) {
+        mMat->SetShaderOpts(GetDefaultMatShaderOpts(this, mMat));
+        mats.push_back(mMat);
+    }
+}
+
+// RndDrawable *RndMesh::CollideShowing(const Segment &seg, float &f, Plane &pl) {
+//     Segment sega0;
+//     Transform tf58;
+//     sLastCollide = -1;
+//     if (IsSkinned() || sRawCollide)
+//         sega0 = seg;
+//     else {
+//         FastInvert(WorldXfm(), tf58);
+//         Multiply(seg.start, tf58, sega0.start);
+//         Multiply(seg.end, tf58, sega0.end);
+//     }
+//     if (mGeomOwner->mBSPTree) {
+//         if (Intersect(sega0, mGeomOwner->mBSPTree, f, pl) && f) {
+//             Multiply(pl, WorldXfm(), pl);
+//             return this;
+//         }
+//     } else {
+//         if (GetVolume() == kVolumeTriangles) {
+//             bool b1 = false;
+//             f = 1.0f;
+//             FOREACH (it, Faces()) {
+//                 const Vert &vert0 = Verts(it->v1);
+//                 const Vert &vert1 = Verts(it->v2);
+//                 const Vert &vert2 = Verts(it->v3);
+//                 Triangle tri;
+//                 if (IsSkinned() && !sRawCollide) {
+//                     tri.Set(
+//                         SkinVertex(vert0, nullptr),
+//                         SkinVertex(vert1, nullptr),
+//                         SkinVertex(vert2, nullptr)
+//                     );
+//                 } else
+//                     tri.Set(vert0.pos, vert1.pos, vert2.pos);
+//                 float fintersect;
+//                 if (Intersect(sega0, tri, false, fintersect)) {
+//                     Interp(sega0.start, sega0.end, fintersect, sega0.end);
+//                     f *= fintersect;
+//                     pl.Set(tri.origin, tri.frame.z);
+//                     b1 = true;
+//                     sLastCollide = (it - Faces().begin());
+//                 }
+//             }
+//             if (b1) {
+//                 if (!sRawCollide)
+//                     Multiply(pl, WorldXfm(), pl);
+//                 return this;
+//             }
+//         }
+//     }
+//     return 0;
+// }
+
+int RndMesh::CollidePlane(const Plane &plane) {
+    int super = RndDrawable::CollidePlane(plane);
+    if (super != 0)
+        return super;
+    Transform tf48;
+    FastInvert(WorldXfm(), tf48);
+    Plane pl58;
+    Multiply(plane, tf48, pl58);
+    if (GetVolume() == kVolumeTriangles) {
+        if (Faces().empty())
+            return -1;
+        else {
+            std::vector<Face>::iterator faceIt = Faces().begin();
+            int faceColl = CollidePlane(*faceIt, pl58);
+            if (faceColl == 0)
+                return 0;
+            else {
+                ++faceIt;
+                for (; faceIt != Faces().end(); ++faceIt) {
+                    if (faceColl != CollidePlane(*faceIt, pl58)) {
+                        return 0;
+                    }
+                }
+                return faceColl;
+            }
+        }
+    } else
+        return 0;
+}
+
 int RndMesh::EstimatedSizeKb() const {
     // sizeof(Vert) is 0x50 here
     // but the actual struct is size 0x60
@@ -466,4 +683,22 @@ void RndMesh::SetKeepMeshData(bool keep) {
 void RndMesh::SetNumVerts(int num) {
     Verts().resize(num);
     Sync(0x3F);
+}
+
+void RndMesh::SetNumFaces(int num) {
+    mGeomOwner->mFaces.resize(num);
+    Sync(0x3F);
+}
+
+void RndMesh::SetNumBones(int num) {
+    if (num > MaxBones()) {
+        MILO_NOTIFY("%s: exceeds bone limit of %d", PathName(this), MaxBones());
+    }
+    mBones.resize(num);
+}
+
+void RndMesh::ScaleBones(float f) {
+    for (ObjVector<RndBone>::iterator it = mBones.begin(); it != mBones.end(); ++it) {
+        it->mOffset.v *= f;
+    }
 }
