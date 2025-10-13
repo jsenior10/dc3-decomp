@@ -14,7 +14,10 @@
 class RndMultiMesh : public RndDrawable {
 public:
     struct Instance {
-        Transform mXfm; // 0x0
+        Instance();
+
+        bool unk0; // 0x0
+        Transform mXfm; // 0x4
     };
 
     // Hmx::Object
@@ -40,6 +43,8 @@ public:
     static void Terminate();
 
     RndMesh *Mesh() const { return mMesh; }
+    void SetMesh(RndMesh *);
+    std::list<RndMultiMesh::Instance> &Instances() { return mInstances; }
 
 protected:
     RndMultiMesh();

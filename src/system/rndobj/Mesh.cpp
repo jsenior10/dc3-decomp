@@ -1,5 +1,6 @@
 #include "rndobj/Mesh.h"
 #include "Utl.h"
+#include "math/Mtx.h"
 #include "math/Vec.h"
 #include "obj/Data.h"
 #include "obj/Object.h"
@@ -12,8 +13,10 @@
 #include "rndobj/MultiMesh.h"
 #include "rndobj/Trans.h"
 #include "utl/BinStream.h"
+#include "utl/MemMgr.h"
 #include "utl/Std.h"
 
+PatchVerts gPatchVerts;
 int MESH_REV_SEP_COLOR = 0x25;
 
 RndMesh::RndMesh()
@@ -651,6 +654,46 @@ int RndMesh::CollidePlane(const Plane &plane) {
         return 0;
 }
 
+void RndMesh::VertVector::operator=(const RndMesh::VertVector &c) {
+    MILO_ASSERT(mCapacity == 0, 0x26D);
+    MILO_ASSERT(c.mCapacity == 0, 0x26E);
+    if (c.mNumVerts != mNumVerts) {
+        delete mVerts;
+        mNumVerts = c.mNumVerts;
+        mVerts = new Vert[mNumVerts];
+    }
+    Vert *otherVerts = c.mVerts;
+    Vert *otherEnd = &otherVerts[mNumVerts];
+    Vert *myVerts = mVerts;
+    while (otherVerts != otherEnd) {
+        *myVerts++ = *otherVerts++;
+    }
+}
+
+void RndMesh::VertVector::resize(int n) {
+    if (mCapacity > 0) {
+        MILO_ASSERT(n <= mCapacity, 0x227);
+        mNumVerts = n;
+    } else if (n == 0) {
+        delete[] mVerts;
+        mVerts = nullptr;
+        mNumVerts = 0;
+    } else if (n != mNumVerts) {
+        Vert *oldverts = mVerts;
+        Vert *oldit = oldverts;
+        Vert *end = oldverts + Min(n, size());
+        mVerts = new Vert[n];
+        mNumVerts = n;
+
+        Vert *newit = mVerts;
+        while (oldit != end) {
+            *newit++ = *oldit++;
+        }
+
+        delete[] oldverts;
+    }
+}
+
 int RndMesh::EstimatedSizeKb() const {
     // sizeof(Vert) is 0x50 here
     // but the actual struct is size 0x60
@@ -701,4 +744,276 @@ void RndMesh::ScaleBones(float f) {
     for (ObjVector<RndBone>::iterator it = mBones.begin(); it != mBones.end(); ++it) {
         it->mOffset.v *= f;
     }
+}
+
+void RndMesh::SetZeroWeightBones() {
+    if (mBones.size() >= 2) {
+        for (int i = 0; i < mVerts.size(); i++) {
+            Vert &curvert = mVerts[i];
+            if (curvert.boneWeights.y == 0)
+                curvert.boneIndices[1] = curvert.boneIndices[0];
+            if (curvert.boneWeights.z == 0)
+                curvert.boneIndices[2] = curvert.boneIndices[0];
+            if (curvert.boneWeights.w == 0)
+                curvert.boneIndices[3] = curvert.boneIndices[0];
+        }
+    }
+}
+
+void RndMesh::ResetNormals() {
+    if (mGeomOwner != this) {
+        MILO_NOTIFY("Must be geom owner to reset normals");
+    } else {
+        ::ResetNormals(this);
+    }
+}
+
+void RndMesh::Tessellate() {
+    if (mGeomOwner != this) {
+        MILO_NOTIFY("Must be geom owner to tessellate");
+    } else {
+        TessellateMesh(this);
+    }
+}
+
+void RndMesh::ClearAO() {
+    if (mGeomOwner != this) {
+        MILO_NOTIFY("Must be geom owner to clear AO");
+    } else {
+        ::ClearAO(this);
+    }
+}
+
+int RndMesh::GetBoneIndex(const RndTransformable *t) {
+    for (int i = 0; i < mBones.size(); i++) {
+        if (mBones[i].mBone == t) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void RndMesh::Sync(int flags) {
+    if (mKeepMeshData) {
+        flags |= 0x200;
+    }
+    OnSync(flags);
+    if (flags | 0x1F) {
+        Verts().unkc = 0;
+    }
+}
+
+bool RndMesh::HasValidBones(unsigned int *boneIdx) const {
+    int idx = 0;
+    for (ObjVector<RndBone>::const_iterator it = mBones.begin(); it != mBones.end();
+         ++it, ++idx) {
+        if (!it->mBone) {
+            if (boneIdx)
+                *boneIdx = idx;
+            return false;
+        }
+    }
+    if (boneIdx)
+        *boneIdx = mBones.size();
+    return true;
+}
+
+void RndMesh::BurnXfm() {
+    if (mGeomOwner != this) {
+        MILO_NOTIFY("Must be geom owner to burn xfm");
+    } else {
+        for (std::list<RndTransformable *>::iterator it = mChildren.begin();
+             it != mChildren.end();
+             ++it) {
+            Transform xfm;
+            Multiply((*it)->LocalXfm(), mLocalXfm, xfm);
+            (*it)->SetLocalXfm(xfm);
+        }
+        ::BurnXfm(this, false);
+    }
+}
+
+void RndMesh::SetBone(int idx, RndTransformable *bone, bool b3) {
+    mBones[idx].mBone = bone;
+    if (b3) {
+        Transform xfm;
+        Invert(bone->WorldXfm(), xfm);
+        Multiply(WorldXfm(), xfm, mBones[idx].mOffset);
+    }
+}
+
+RndMultiMesh *RndMesh::CreateMultiMesh() {
+    RndMesh *owner = mGeomOwner;
+    if (!owner->mMultiMesh) {
+        owner->mMultiMesh = Hmx::Object::New<RndMultiMesh>();
+        owner->mMultiMesh->SetMesh(owner);
+    }
+    owner->mMultiMesh->Instances().resize(0);
+    return owner->mMultiMesh;
+}
+
+void RndMesh::RemoveInvalidBones() {
+    for (ObjVector<RndBone>::iterator it = mBones.begin(); it != mBones.end();) {
+        if (it->mBone)
+            ++it;
+        else
+            it = mBones.erase(it);
+    }
+}
+
+void RndMesh::CopyGeometryFromOwner() {
+    if (mGeomOwner != this) {
+        CopyGeometry(mGeomOwner, true);
+        Sync(0x3F);
+    }
+}
+
+void RndMesh::CopyGeometry(const RndMesh *mesh, bool b2) {
+    mGeomOwner = this;
+    mVerts = mesh->mGeomOwner->mVerts;
+    mFaces = mesh->mGeomOwner->mFaces;
+    mPatches = mesh->mGeomOwner->mPatches;
+    if (b2)
+        SetVolume(mesh->mGeomOwner->mVolume);
+    mBones = mesh->mBones;
+}
+
+DataNode RndMesh::OnPointCollide(const DataArray *da) {
+    BSPNode *tree = GetBSPTree();
+    Vector3 v(da->Float(2), da->Float(3), da->Float(4));
+    MultiplyTranspose(v, WorldXfm(), v);
+    return tree && Intersect(v, tree);
+}
+
+DataNode RndMesh::OnBuildFromBSP(const DataArray *a) {
+    BuildFromBSP(this);
+    return 0;
+}
+
+DataNode RndMesh::OnAttachMesh(const DataArray *da) {
+    RndMesh *m = da->Obj<RndMesh>(2);
+    AttachMesh(this, m);
+    delete m;
+    return 0;
+}
+
+DataNode RndMesh::OnGetVertNorm(const DataArray *da) {
+    Vert *v;
+    s32 index = da->Int(2);
+    MILO_ASSERT(index >= 0 && index < mVerts.size(), 0x858);
+    v = &mVerts[index];
+    *da->Var(3) = v->norm.x;
+    *da->Var(4) = v->norm.y;
+    *da->Var(5) = v->norm.z;
+    return 0;
+}
+
+DataNode RndMesh::OnSetVertNorm(const DataArray *da) {
+    Vert *v;
+    s32 index = da->Int(2);
+    MILO_ASSERT(index >= 0 && index < mVerts.size(), 0x863);
+    v = &mVerts[index];
+    v->norm.x = da->Float(3);
+    v->norm.y = da->Float(4);
+    v->norm.z = da->Float(5);
+    Sync(31);
+    return 0;
+}
+
+DataNode RndMesh::OnGetVertXYZ(const DataArray *da) {
+    Vert *v;
+    s32 index = da->Int(2);
+    MILO_ASSERT(index >= 0 && index < mVerts.size(), 0x86F);
+    v = &mVerts[index];
+    *da->Var(3) = v->pos.x;
+    *da->Var(4) = v->pos.y;
+    *da->Var(5) = v->pos.z;
+    return 0;
+}
+
+DataNode RndMesh::OnSetVertXYZ(const DataArray *da) {
+    Vert *v;
+    s32 index = da->Int(2);
+    MILO_ASSERT(index >= 0 && index < mVerts.size(), 0x87A);
+    v = &mVerts[index];
+    v->pos.x = da->Float(3);
+    v->pos.y = da->Float(4);
+    v->pos.z = da->Float(5);
+    Sync(31);
+    return 0;
+}
+
+DataNode RndMesh::OnGetVertUV(const DataArray *da) {
+    Vert *v;
+    s32 index = da->Int(2);
+    MILO_ASSERT(index >= 0 && index < mVerts.size(), 0x886);
+    v = &mVerts[index];
+    *da->Var(3) = v->tex.x;
+    *da->Var(4) = v->tex.y;
+    return 0;
+}
+
+DataNode RndMesh::OnSetVertUV(const DataArray *da) {
+    Vert *v;
+    s32 index = da->Int(2);
+    MILO_ASSERT(index >= 0 && index < mVerts.size(), 0x890);
+    v = &mVerts[index];
+    v->tex.x = da->Float(3);
+    v->tex.y = da->Float(4);
+    Sync(31);
+    return 0;
+}
+
+DataNode RndMesh::OnGetFace(const DataArray *da) {
+    Face *f;
+    int index = da->Int(2);
+    MILO_ASSERT(index >= 0 && index < mFaces.size(), 0x89B);
+    f = &mFaces[index];
+    *da->Var(3) = f->v1;
+    *da->Var(4) = f->v2;
+    *da->Var(5) = f->v3;
+    return 0;
+}
+
+DataNode RndMesh::OnSetFace(const DataArray *da) {
+    Face *f;
+    int index = da->Int(2);
+    MILO_ASSERT(index >= 0 && index < mFaces.size(), 0x8A6);
+    f = &mFaces[index];
+    f->v1 = da->Int(3);
+    f->v2 = da->Int(4);
+    f->v3 = da->Int(5);
+    Sync(32);
+    return 0;
+}
+
+DataNode RndMesh::OnUnitizeNormals(const DataArray *da) {
+    for (Vert *it = Verts().begin(); it != Verts().end(); ++it) {
+        Normalize(it->norm, it->norm);
+    }
+    return 0;
+}
+
+DataNode RndMesh::OnConfigureMesh(const DataArray *da) {
+    static Symbol configurable_mesh("configurable_mesh");
+    if (Type() != configurable_mesh)
+        MILO_NOTIFY("Can't configure nonconfigurable mesh %s\n", Name());
+    else {
+        static Symbol left("left");
+        static Symbol right("right");
+        static Symbol height("height");
+        float fleft = Property(left, true)->Float();
+        float fright = Property(right, true)->Float();
+        float fheight = Property(height, true)->Float();
+        Vector3 v54(fleft, 0, fheight);
+        Vector3 v60(fleft, 0, 0);
+        Vector3 v6c(fright, 0, 0);
+        Vector3 v78(fright, 0, fheight);
+        mVerts[0].pos = v54;
+        mVerts[1].pos = v60;
+        mVerts[2].pos = v6c;
+        mVerts[3].pos = v78;
+        Sync(0x3F);
+    }
+    return 0;
 }

@@ -115,6 +115,7 @@ void MultiplyEq(BSPNode *, const Transform &);
 void Multiply(const Plane &, const Transform &, Plane &);
 void Multiply(const Sphere &, const Transform &, Sphere &);
 bool Intersect(const Segment &, const Sphere &);
+bool Intersect(const Vector3 &, const BSPNode *);
 
 DataNode SetBSPParams(DataArray *da);
 void GeoInit();

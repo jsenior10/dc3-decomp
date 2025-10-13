@@ -49,6 +49,25 @@ public:
 
     class Vert {
     public:
+        Vert()
+            : pos(0, 0, 0), norm(0, 1, 0), boneWeights(0, 0, 0, 0), color(1, 1, 1, 1),
+              tex(0, 0) {
+            for (int i = 0; i < 4; i++) {
+                boneIndices[i] = i;
+            }
+            unk50.Set(1, 0, 0, 1);
+        }
+
+        static void *operator new(unsigned int s) {
+            return _MemAllocTemp(s, __FILE__, 0x78, "Vert", 0);
+        }
+        static void *operator new(unsigned int s, void *place) { return place; }
+        static void *operator new[](unsigned int s) {
+            return _MemAllocTemp(s, __FILE__, 0x78, "Vert", 0);
+        }
+        static void operator delete(void *v) { MemFree(v, __FILE__, 0x78, "Vert"); }
+        static void operator delete[](void *v) { MemFree(v, __FILE__, 0x78, "Vert"); }
+
         Vector3 pos; // 0x0
         Vector3 norm; // 0x10
         Vector4 boneWeights; // 0x20
@@ -93,6 +112,7 @@ public:
         void resize(int);
         Vert *begin() { return &mVerts[0]; }
         Vert *end() { return &mVerts[mNumVerts]; }
+        void operator=(const VertVector &);
 
         Vert *mVerts; // 0x0
         int mNumVerts; // 0x4
@@ -142,8 +162,10 @@ public:
     Vert &Verts(int idx) { return mGeomOwner->mVerts[idx]; }
     Face &Faces(int idx) { return mGeomOwner->mFaces[idx]; }
     Volume GetVolume() const { return mGeomOwner->mVolume; }
+    BSPNode *GetBSPTree() const { return mGeomOwner->mBSPTree; }
     bool IsSkinned() const { return !mBones.empty(); }
     int MaxBones() const { return GetGfxMode() != kOldGfx ? 40 : 4; }
+    int NumBones() const { return mBones.size(); }
     void InstanceGeomOwnerBones();
     void DeleteBones(bool);
     void BurnXfm();
@@ -159,6 +181,8 @@ public:
     int CollidePlane(const RndMesh::Face &, const Plane &);
     Vector3 SkinVertex(const RndMesh::Vert &, Vector3 *);
     void ScaleBones(float);
+    int GetBoneIndex(const RndTransformable *);
+    RndMultiMesh *CreateMultiMesh();
 
 protected:
     RndMesh();
@@ -211,4 +235,54 @@ protected:
     int unk180;
     unsigned char *mCompressedVerts; // 0x184
     unsigned int mNumCompressedVerts; // 0x188
+};
+
+class PatchVerts {
+public:
+    PatchVerts() : mCentroid(0, 0, 0) {}
+    ~PatchVerts() {}
+
+    int NumVerts() const { return mPatchVerts.size(); }
+
+    void Add(int, RndMesh::VertVector &, Vector3 &);
+
+    void Clear() {
+        mPatchVerts.clear();
+        mCentroid.Set(0, 0, 0);
+    }
+
+    bool HasVert(int vert) const {
+        int idx = GreaterEq(vert);
+        if (idx < mPatchVerts.size()) {
+            return mPatchVerts[idx] == vert;
+        } else
+            return false;
+    }
+
+    int GreaterEq(int iii) const {
+        if (!mPatchVerts.empty() && mPatchVerts.front() < iii) {
+            if (mPatchVerts.back() < iii) {
+                return mPatchVerts.size();
+            } else {
+                int u5 = 0;
+                int u2 = mPatchVerts.size() - 1;
+                if (u5 + 1 < u2) {
+                    int u4 = (u5 + u2) >> 1;
+                    int curVert = mPatchVerts[u4];
+                    if (curVert < iii) {
+                        u5 = u4;
+                    }
+                    if (iii <= curVert) {
+                        u2 = u4;
+                    }
+                }
+                return u2;
+            }
+        } else
+            return 0;
+    }
+
+protected:
+    Vector3 mCentroid; // 0x0
+    std::vector<int> mPatchVerts; // 0xc
 };
