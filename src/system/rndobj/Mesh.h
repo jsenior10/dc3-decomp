@@ -3,6 +3,7 @@
 #include "math/Geo.h"
 #include "obj/Data.h"
 #include "obj/Object.h"
+#include "os/System.h"
 #include "rndobj/Draw.h"
 #include "rndobj/Mat.h"
 #include "rndobj/Trans.h"
@@ -90,6 +91,8 @@ public:
         const Vert &operator[](int i) const { return mVerts[i]; }
         void clear() { resize(0); }
         void resize(int);
+        Vert *begin() { return &mVerts[0]; }
+        Vert *end() { return &mVerts[mNumVerts]; }
 
         Vert *mVerts; // 0x0
         int mNumVerts; // 0x4
@@ -139,6 +142,8 @@ public:
     Vert &Verts(int idx) { return mGeomOwner->mVerts[idx]; }
     Face &Faces(int idx) { return mGeomOwner->mFaces[idx]; }
     Volume GetVolume() const { return mGeomOwner->mVolume; }
+    bool IsSkinned() const { return !mBones.empty(); }
+    int MaxBones() const { return GetGfxMode() != kOldGfx ? 40 : 4; }
     void InstanceGeomOwnerBones();
     void DeleteBones(bool);
     void BurnXfm();
@@ -148,6 +153,9 @@ public:
     void CopyGeometryFromOwner();
     void Sync(int);
     void SetVolume(Volume);
+    void CopyBones(const RndMesh *);
+    void CopyGeometry(const RndMesh *, bool);
+    void SetZeroWeightBones();
 
 protected:
     RndMesh();
@@ -158,6 +166,7 @@ protected:
     bool HasValidBones(unsigned int *) const;
     void SetNumVerts(int verts);
     void SetNumFaces(int faces) { mGeomOwner->mFaces.resize(faces); }
+    void RemoveInvalidBones();
 
     DataNode OnCompareEdgeVerts(const DataArray *);
     DataNode OnAttachMesh(const DataArray *);
@@ -191,7 +200,7 @@ protected:
     BSPNode *mBSPTree; // 0x168
     /** The MultiMesh that will draw this Mesh multiple times. */
     RndMultiMesh *mMultiMesh; // 0x16c
-    bool unk170;
+    bool mHasAOCalc; // 0x170
     bool mKeepMeshData; // 0x171
     MotionBlurCache mMotionCache; // 0x174
     int unk180;

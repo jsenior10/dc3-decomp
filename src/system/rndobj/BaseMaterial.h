@@ -139,6 +139,8 @@ public:
     const DataNode *GetDefaultPropVal(Symbol);
     BaseMaterial *NextPass() const { return mNextPass; }
     RndTex *GetDiffuseTex() const { return mDiffuseTex; }
+    RndTex *NormalMap() const { return mNormalMap; }
+    ZMode GetZMode() const { return mZMode; }
     bool IsNextPass(BaseMaterial *m);
 
 protected:

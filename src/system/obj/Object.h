@@ -1091,7 +1091,7 @@ BinStream &operator>>(BinStreamRev &bs, ObjVector<T> &vec) {
     for (ObjVector<T>::iterator it = vec.begin(); it != vec.end(); it++) {
         bs >> *it;
     }
-    return bs;
+    return bs.stream;
 }
 
 template <class T>

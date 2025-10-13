@@ -37,3 +37,5 @@ void RndUtlTerminate();
 void RndSplasherPoll();
 void RndSplasherSuspend();
 void RndSplasherResume();
+
+void MakeTangentsLate(RndMesh *);

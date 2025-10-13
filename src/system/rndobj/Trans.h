@@ -66,6 +66,7 @@ public:
     const Transform &LocalXfm() const { return mLocalXfm; }
     RndTransformable *TransParent() const { return mParent; }
     bool Dirty() const { return mDirty; }
+    Constraint TransConstraint() const { return mConstraint; }
 
     Transform &DirtyLocalXfm() {
         SetDirty();
