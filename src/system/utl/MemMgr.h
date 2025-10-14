@@ -2,6 +2,7 @@
 
 extern const char *gStlAllocName;
 extern bool gStlAllocNameLookup;
+extern class CriticalSection *gMemLock;
 
 void PhysDelta(const char *);
 bool MemUseLowestMip();
@@ -15,6 +16,8 @@ int MemFindHeap(const char *);
 void MemPushHeap(int);
 void MemPopHeap();
 void MemForceNewOperatorAlign(int);
+void MemTrackAlloc(int, int, const char *, void *, bool, unsigned char, const char *, int);
+void MemTrackFree(void *);
 
 #define kNoHeap -3
 #define kSystemHeap -1

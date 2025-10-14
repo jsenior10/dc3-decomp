@@ -1,42 +1,73 @@
 #pragma once
+#include "utl/MemMgr.h"
+#include "utl/TextStream.h"
+#include <vector>
 
 // forward declaration
-class FixedSizeAlloc;
+class ChunkAllocator;
 
-class ChunkAllocator {
-public:
-    FixedSizeAlloc *mAllocs[32];
-
-    ChunkAllocator(int, int, int);
-    void *Alloc(int);
-    void Free(void *, int);
-    static void UploadDebugStats();
-
-    // *might* be wrong
-    operator bool() { return mAllocs != 0; }
-};
+#define MAX_FIXED_ALLOCS 0x40
 
 class FixedSizeAlloc {
-public:
-    FixedSizeAlloc(int, ChunkAllocator *, int);
-    virtual ~FixedSizeAlloc();
-    virtual void *RawAlloc(int);
+    friend class ChunkAllocator;
 
-    int mAllocSizeWords;
-    int mNumAllocs;
-    int mMaxAllocs;
-    int mNumChunks;
-    int *mFreeList;
-    int mNodesPerChunk;
-    ChunkAllocator *mAlloc;
+public:
+    FixedSizeAlloc(int, int);
+    virtual ~FixedSizeAlloc() {}
 
     void *Alloc();
     void Free(void *);
+
+    MEM_OVERLOAD(FixedSizeAlloc, 0x1C);
+
+protected:
+    virtual int *RawAlloc(int);
+
     void Refill();
+
+    int mAllocSizeWords; // 0x4
+    int mNumAllocs; // 0x8
+    int mMaxAllocs; // 0xc
+    int mNumChunks; // 0x10
+    int *mFreeList; // 0x14
+    int mNodesPerChunk; // 0x18
 };
+
+class ChunkAllocator {
+public:
+    ChunkAllocator();
+    void *Alloc(int);
+    void Free(void *, int);
+    void Print(TextStream &);
+
+    MEM_OVERLOAD(ChunkAllocator, 0x38);
+
+private:
+    FixedSizeAlloc *mAllocs[64]; // 0x0
+};
+
+class ReclaimableAlloc : public FixedSizeAlloc {
+public:
+    ReclaimableAlloc(int, const char *);
+    virtual ~ReclaimableAlloc() {}
+
+    void *CustAlloc(int);
+    void CustFree(void *);
+
+protected:
+    virtual int *RawAlloc(int);
+
+    void DeallocAll();
+
+    const char *mName; // 0x1c
+    std::vector<void *> mChunks; // 0x20
+};
+
+void PoolAllocInit(class DataArray *);
 
 void *PoolAlloc(int classSize, int reqSize, const char *file, int line, const char *name);
 void PoolFree(int, void *mem, const char *file, int line, const char *name);
+void PoolReport(TextStream &);
 
 #define POOL_OVERLOAD(class_name, line_num)                                              \
     static void *operator new(unsigned int s) {                                          \

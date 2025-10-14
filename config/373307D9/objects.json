@@ -990,7 +990,7 @@
             "system/utl/OSCMessenger.cpp": "MISSING",
             "system/utl/Option.cpp": "NonMatching",
             "system/utl/Pool.cpp": "MISSING",
-            "system/utl/PoolAlloc.cpp": "MISSING",
+            "system/utl/PoolAlloc.cpp": "NonMatching",
             "system/utl/Profiler.cpp": "MISSING",
             "system/utl/Song.cpp": "MISSING",
             "system/utl/SongInfoAudioType.cpp": "NonMatching",
