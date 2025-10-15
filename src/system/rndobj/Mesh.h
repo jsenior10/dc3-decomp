@@ -163,6 +163,7 @@ public:
     Face &Faces(int idx) { return mGeomOwner->mFaces[idx]; }
     Volume GetVolume() const { return mGeomOwner->mVolume; }
     BSPNode *GetBSPTree() const { return mGeomOwner->mBSPTree; }
+    RndMat *Mat() const { return mMat; }
     bool IsSkinned() const { return !mBones.empty(); }
     int MaxBones() const { return GetGfxMode() != kOldGfx ? 40 : 4; }
     int NumBones() const { return mBones.size(); }

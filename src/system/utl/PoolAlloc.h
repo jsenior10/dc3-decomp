@@ -49,7 +49,6 @@ private:
 class ReclaimableAlloc : public FixedSizeAlloc {
 public:
     ReclaimableAlloc(int, const char *);
-    virtual ~ReclaimableAlloc() {}
 
     void *CustAlloc(int);
     void CustFree(void *);

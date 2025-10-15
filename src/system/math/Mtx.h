@@ -234,6 +234,8 @@ inline BinStream &operator>>(BinStream &bs, Transform &tf) {
     return bs;
 }
 
+inline BinStream &operator>>(BinStreamRev &bs, Transform &tf) { return bs.stream >> tf; }
+
 class QuatXfm {
 public:
     Vector3 v;

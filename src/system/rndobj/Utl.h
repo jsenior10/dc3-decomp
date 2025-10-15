@@ -20,6 +20,13 @@ void RndScaleObject(Hmx::Object *, float, float);
 bool SortDraws(RndDrawable *, RndDrawable *);
 bool SortPolls(const RndPollable *, const RndPollable *);
 
+void ScrambleXfms(RndMultiMesh *);
+void DistributeXfms(RndMultiMesh *, int, float);
+void MoveXfms(RndMultiMesh *, const Vector3 &);
+void ScaleXfms(RndMultiMesh *, const Vector3 &);
+void SortXfms(RndMultiMesh *, const Vector3 &);
+void RandomXfms(RndMultiMesh *);
+
 void CreateAndSetMetaMat(RndMat *);
 void FixVertOrder(const RndMesh *, RndMesh *);
 

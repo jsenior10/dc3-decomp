@@ -22,6 +22,9 @@ public:
     OBJ_MEM_OVERLOAD(0x14);
     NEW_OBJ(RndMultiMeshProxy)
     static void Init() { REGISTER_OBJ_FACTORY(RndMultiMeshProxy) }
+    RndMultiMesh *MultiMesh() const { return mMultiMesh; }
+    void
+    SetMultiMesh(RndMultiMesh *, const std::list<RndMultiMesh::Instance>::iterator &);
 
 protected:
     RndMultiMeshProxy();
