@@ -30,8 +30,7 @@ inline TextStream &operator<<(TextStream &ts, FilePath &fp) {
 // inline void ResetRoot(const char *path) { FilePath::sRoot.Set(FileRoot(), path); }
 
 inline BinStream &operator<<(BinStream &bs, const FilePath &fp) {
-    bs << FileRelativePath(FilePath::Root().c_str(), fp.c_str());
-    return bs;
+    return bs << FileRelativePath(FilePath::Root().c_str(), fp.c_str());
 }
 
 BinStream &operator>>(BinStream &, FilePath &);

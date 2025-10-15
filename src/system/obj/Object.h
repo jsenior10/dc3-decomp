@@ -920,7 +920,7 @@ namespace Hmx {
         Object();
         virtual ~Object();
         virtual Object *RefOwner() const { return const_cast<Object *>(this); }
-        virtual bool Replace(ObjRef *, Hmx::Object *);
+        virtual bool Replace(ObjRef *from, Hmx::Object *to);
         OBJ_CLASSNAME(Object);
         OBJ_SET_TYPE(Object);
         virtual DataNode Handle(DataArray *, bool);

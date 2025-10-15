@@ -50,6 +50,14 @@ public:
         kUnk7 = 7,
         kDefaultTex_Max = 8
     };
+    enum DrawMode {
+        kDrawNormal = 0,
+        kDrawShadowDepth = 1,
+        kDrawExtrude = 2,
+        kDrawShadowColor = 3,
+        kDrawOcclusion = 4,
+        kDrawVelocity = 6
+    };
 
     struct PointTest {
         int unk0, unk4, unk8;
@@ -85,13 +93,9 @@ public:
     virtual void ForceColorClear() {}
     virtual void ScreenDump(const char *);
     virtual void ScreenDumpUnique(const char *);
-    virtual void DrawRect(
-        const Hmx::Rect &,
-        const Hmx::Color &,
-        RndMat *,
-        const Hmx::Color *,
-        const Hmx::Color *
-    ) {}
+    virtual void
+    DrawRect(const Hmx::Rect &, const Hmx::Color &, RndMat *, const Hmx::Color *, const Hmx::Color *) {
+    }
     virtual Vector2 &DrawString(const char *, const Vector2 &, const Hmx::Color &, bool);
     virtual void DrawLine(const Vector3 &, const Vector3 &, const Hmx::Color &, bool) {}
     virtual void BeginDrawing();
@@ -141,13 +145,8 @@ public:
     void ResetProcCounter();
     bool GetEvenOddDisabled() const;
     void SetEvenOddDisabled(bool);
-    void DrawRectScreen(
-        const Hmx::Rect &,
-        const Hmx::Color &,
-        RndMat *,
-        const Hmx::Color *,
-        const Hmx::Color *
-    );
+    void
+    DrawRectScreen(const Hmx::Rect &, const Hmx::Color &, RndMat *, const Hmx::Color *, const Hmx::Color *);
     const Vector2 &
     DrawStringScreen(const char *c, const Vector2 &v, const Hmx::Color &color, bool b4);
     RndPostProc *GetPostProcOverride();
@@ -240,7 +239,7 @@ protected:
     bool mDrawing; // 0x136
     bool mWorldEnded; // 0x137
     Aspect mAspect; // 0x138
-    int unk13c;
+    DrawMode mDrawMode; // 0x13c
     bool unk140;
     bool unk141;
     bool mShrinkToSafe; // 0x142
