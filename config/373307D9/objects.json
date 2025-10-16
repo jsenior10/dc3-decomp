@@ -729,7 +729,7 @@
             "system/rndobj/FontBase.cpp": "NonMatching",
             "system/rndobj/Fur.cpp": "NonMatching",
             "system/rndobj/Fur_NG.cpp": "NonMatching",
-            "system/rndobj/Gen.cpp": "MISSING",
+            "system/rndobj/Gen.cpp": "NonMatching",
             "system/rndobj/Graph.cpp": "NonMatching",
             "system/rndobj/Group.cpp": "NonMatching",
             "system/rndobj/HiResScreen.cpp": "NonMatching",

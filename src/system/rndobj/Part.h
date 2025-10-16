@@ -6,6 +6,8 @@
 #include "rndobj/Trans.h"
 #include "utl/MemMgr.h"
 
+class RndParticle {};
+
 class RndParticleSys : public RndAnimatable,
                        public RndPollable,
                        public RndTransformable,
