@@ -85,7 +85,7 @@ public:
 // Attractor
 class Attractor {
 public:
-    Attractor(Hmx::Object *owner) : mAttractor(owner), mStrength(0) {}
+    Attractor(Hmx::Object *owner) : mAttractor(owner), mStrength(1) {}
     void Save(BinStream &) const;
     void Load(BinStreamRev &);
 
@@ -138,6 +138,13 @@ public:
     void SetSubSamples(int);
     void SetMesh(RndMesh *);
     void FreeAllParticles();
+    void SetAnimatedUV(bool);
+    void SetTileHoldTime(float);
+    void SetNumTiles(int);
+    void SetGrowRatio(float);
+    void SetShrinkRatio(float);
+    void SetFrameDrive(bool);
+    void SetPauseOffscreen(bool);
 
 protected:
     RndParticleSys();
@@ -171,10 +178,10 @@ protected:
     RndParticle *mActiveParticles; // 0x128
     int mNumActive; // 0x12c
     float mEmitCount; // 0x130
-    bool unk134;
+    bool mFrameDrive; // 0x134
     float unk138;
     int unk13c;
-    bool unk140;
+    bool mPauseOffscreen; // 0x140
     float unk144;
     Vector2 mBubblePeriod; // 0x148
     Vector2 mBubbleSize; // 0x150
@@ -185,96 +192,70 @@ protected:
     Vector2 mPitch; // 0x188
     Vector2 mYaw; // 0x190
     Vector2 mEmitRate; // 0x198
-    float unk1a0;
-    float unk1a4;
-    float unk1a8;
-    float unk1ac;
-    float unk1b0;
-    float unk1b4;
-    float unk1b8;
-    float unk1bc;
-    float unk1c0;
-    float unk1c4;
-    float unk1c8;
-    float unk1cc;
-    float unk1d0;
-    float unk1d4;
-    float unk1d8;
-    float unk1dc;
-    float unk1e0;
-    float unk1e4;
-    float unk1e8;
-    float unk1ec;
-    ObjPtr<RndMesh> unk1f0;
-    ObjPtr<RndMat> unk204;
-    bool unk218;
+    Vector2 mStartSize; // 0x1a0
+    Vector2 mDeltaSize; // 0x1a8
+    Hmx::Color mStartColorLow; // 0x1b0
+    Hmx::Color mStartColorHigh; // 0x1c0
+    Hmx::Color mEndColorLow; // 0x1d0
+    Hmx::Color mEndColorHigh; // 0x1e0
+    ObjPtr<RndMesh> mMeshEmitter; // 0x1f0
+    ObjPtr<RndMat> mMat; // 0x204
+    bool mPreserve; // 0x218
     int unk21c;
     Vector3 unk220[7];
     float unk290;
     float unk294;
     float unk298;
     float mRelativeMotion; // 0x29c
-    ObjOwnerPtr<RndTransformable> unk2a0; // 0x2a0
+    ObjOwnerPtr<RndTransformable> mMotionParent; // 0x2a0
     Vector3 unk2b4;
-    ObjPtr<RndTransformable> unk2c4; // 0x2c4
-    Vector3 unk2d8;
-    float unk2e8;
-    bool unk2ec;
-    bool unk2ed;
+    ObjPtr<RndTransformable> mBounce; // 0x2c4
+    Vector3 mForceDir; // 0x2d8
+    float mDrag; // 0x2e8
+    bool mBubble; // 0x2ec
+    bool mPreSpawn; // 0x2ed
     bool unk2ee;
-    bool unk2ef;
-    float unk2f0;
-    float unk2f4;
-    float unk2f8;
-    bool unk2fc;
-    float unk300;
-    float unk304;
-    float unk308;
-    float unk30c;
-    bool unk310;
-    bool unk311;
-    bool unk312;
-    bool unk313;
-    float unk314;
-    float unk318;
-    int unk31c;
+    bool mSpin; // 0x2ef
+    Vector2 mRPM; // 0x2f0
+    float mRPMDrag; // 0x2f8
+    bool mRandomDirection; // 0x2fc
+    Vector2 mStartOffset; // 0x300
+    Vector2 mEndOffset; // 0x308
+    bool mVelocityAlign; // 0x310
+    bool mStretchWithVelocity; // 0x311
+    bool mConstantArea; // 0x312
+    bool mPerspective; // 0x313
+    float mStretchScale; // 0x314
+    float mScreenAspect; // 0x318
+    int mSubSamples; // 0x31c
     Transform unk320;
-    float unk360;
-    float unk364;
-    float unk368;
-    float unk36c;
-    float unk370;
-    float unk374;
-    float unk378;
-    float unk37c;
-    float unk380;
-    float unk384;
-    float unk388;
-    bool unk38c;
-    float unk390;
+    float mGrowRatio; // 0x360
+    float mShrinkRatio; // 0x364
+    float mMidColorRatio; // 0x368
+    Hmx::Color mMidColorLow; // 0x36c
+    Hmx::Color mMidColorHigh; // 0x37c
+    bool mBirthMomentum; // 0x38c
+    float mBirthMomentumAmount; // 0x390
     int unk394;
     int unk398;
     int unk39c;
-    int unk3a0;
+    int mMaxBurst; // 0x3a0
     float unk3a4;
-    float unk3a8;
-    float unk3ac;
-    float unk3b0;
-    float unk3b4;
-    float unk3b8;
-    float unk3bc;
+    Vector2 mTimeBetween; // 0x3a8
+    Vector2 mPeakRate; // 0x3b0
+    Vector2 mDuration; // 0x3b8
     int unk3c0;
     float unk3c4;
-    bool unk3c8;
-    bool unk3c9;
-    bool unk3ca;
-    float unk3cc;
-    int unk3d0;
-    int unk3d4;
-    int unk3d8;
-    int unk3dc;
-    float unk3e0;
-    float unk3e4;
+    bool mAnimateUVs; // 0x3c8
+    bool mLoopUVAnim; // 0x3c9
+    bool mRandomAnimStart; // 0x3ca
+    float mTileHoldTime; // 0x3cc
+    int mNumTilesAcross; // 0x3d0
+    int mNumTilesDown; // 0x3d4
+    int mNumTilesTotal; // 0x3d8
+    int mStartingTile; // 0x3dc
+    float unk3e0; // 0x3e0
+    float unk3e4; // 0x3e4
     ObjVector<Attractor> mAttractors; // 0x3e8
 };
 
