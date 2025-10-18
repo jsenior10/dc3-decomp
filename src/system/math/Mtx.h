@@ -300,6 +300,7 @@ void FastInvert(const Transform &, Transform &);
 void Invert(const Hmx::Matrix4 &, Hmx::Matrix4 &);
 void Transpose(const Hmx::Matrix4 &, Hmx::Matrix4 &);
 void Multiply(const Frustum &, const Transform &, Frustum &);
+void Transpose(const Transform &, Transform &);
 
 void MakeRotMatrix(const Hmx::Quat &, Hmx::Matrix3 &);
 

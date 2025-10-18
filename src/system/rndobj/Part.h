@@ -168,12 +168,80 @@ public:
     void SetPauseOffscreen(bool);
     RndParticle *AllocParticle();
     RndParticle *FreeParticle(RndParticle *);
+    void MakeLocToRel(Transform &);
+    void ExplicitParticles(int, bool, PartOverride &);
+    void InitParticle(RndParticle *, const Transform *);
+    void SetMat(RndMat *mat) { mMat = mat; }
+
+    float CalcFrame() {
+        if (mFrameDrive)
+            return mFrame;
+        else
+            return mElapsedTime;
+    }
+
+    const Hmx::Color &StartColorLow() const { return mStartColorLow; }
+    const Hmx::Color &StartColorHigh() const { return mStartColorHigh; }
+    void SetStartColor(const Hmx::Color &low, const Hmx::Color &high) {
+        mStartColorLow = low;
+        mStartColorHigh = high;
+    }
+
+    const Hmx::Color &EndColorLow() const { return mEndColorLow; }
+    const Hmx::Color &EndColorHigh() const { return mEndColorHigh; }
+    void SetEndColor(const Hmx::Color &low, const Hmx::Color &high) {
+        mEndColorLow = low;
+        mEndColorHigh = high;
+    }
+    const Vector2 &EmitRate() const { return mEmitRate; }
+    void SetEmitRate(float x, float y) { mEmitRate.Set(x, y); }
+    const Vector2 &Speed() const { return mSpeed; }
+    void SetSpeed(float x, float y) { mSpeed.Set(x, y); }
+    const Vector2 &Life() const { return mLife; }
+    void SetLife(float x, float y) { mLife.Set(x, y); }
+    const Vector2 &StartSize() const { return mStartSize; }
+    void SetStartSize(float x, float y) { mStartSize.Set(x, y); }
+
+    void SetBoxExtent(const Vector3 &v1, const Vector3 &v2) {
+        mBoxExtent1 = v1;
+        mBoxExtent2 = v2;
+    }
+
+    void SetBubbleSize(float x, float y) {
+        mBubbleSize.x = x;
+        mBubbleSize.y = y;
+    }
+    void SetBubblePeriod(float x, float y) {
+        mBubblePeriod.x = x;
+        mBubblePeriod.y = y;
+    }
+    void SetForceDir(const Vector3 &v) { mForceDir = v; }
+    void SetDeltaSize(float x, float y) {
+        mDeltaSize.x = x;
+        mDeltaSize.y = y;
+    }
+    void SetRotate(bool b) { mRotate = b; }
+    void SetAlignWithVelocity(bool b) { mAlignWithVelocity = b; }
+    void SetStretchWithVelocity(bool b) { mStretchWithVelocity = b; }
+    void SetConstantArea(bool b) { mConstantArea = b; }
+
+    void SetMaxBurst(int i) { mMaxBurst = i; }
+    void SetTimeBetweenBursts(float f1, float f2) { mBurstInterval.Set(f1, f2); }
+    void SetPeakRate(float f1, float f2) { mBurstPeak.Set(f1, f2); }
+    void SetDuration(float f1, float f2) { mBurstLength.Set(f1, f2); }
+    void SetRPM(float f1, float f2) { mRPM.Set(f1, f2); }
+    void SetRPMDrag(float f) { mRPMDrag = f; }
+    void SetStartOffset(float f1, float f2) { mStartOffset.Set(f1, f2); }
+    void SetEndOffset(float f1, float f2) { mEndOffset.Set(f1, f2); }
+    void SetDrag(float f) { mDrag = f; }
+    void SetStretchScale(float f) { mStretchScale = f; }
 
 protected:
     RndParticleSys();
 
     void UpdateParticles();
     void UpdateRelativeXfm();
+    void InitParticle(float, RndParticle *, const Transform *, PartOverride &);
 
     DataNode OnSetStartColor(const DataArray *);
     DataNode OnSetStartColorInt(const DataArray *);
@@ -277,7 +345,7 @@ protected:
     /** "Ratio of screen height to width" */
     float mScreenAspect; // 0x318
     int mSubSamples; // 0x31c
-    Transform unk320;
+    Transform mSubSampleXfm; // 0x320
     float mGrowRatio; // 0x360
     float mShrinkRatio; // 0x364
     float mMidColorRatio; // 0x368
@@ -297,7 +365,7 @@ protected:
     Vector2 mBurstPeak; // 0x3b0
     Vector2 mBurstLength; // 0x3b8
     int unk3c0;
-    float unk3c4;
+    float mElapsedTime; // 0x3c4
     /** "uses material texture as page tiles to animated through" */
     bool mAnimateUVs; // 0x3c8
     /** "animation loops to beginning if true" */

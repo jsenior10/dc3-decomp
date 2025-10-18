@@ -130,9 +130,9 @@ RndParticleSys::RndParticleSys()
       mMidColorRatio(0.5), mMidColorLow(1, 1, 1), mMidColorHigh(1, 1, 1),
       mBirthMomentum(0), mBirthMomentumAmount(1), mMaxBurst(0), unk3a4(0),
       mBurstInterval(15, 35), mBurstPeak(4, 8), mBurstLength(20, 30), unk3c0(0),
-      unk3c4(0), mAnimateUVs(0), mLoopUVAnim(1), mRandomAnimStart(0), mTileHoldTime(0),
-      mNumTilesAcross(1), mNumTilesDown(1), mNumTilesTotal(1), mStartingTile(0),
-      unk3e0(1), unk3e4(1), mAttractors(this) {
+      mElapsedTime(0), mAnimateUVs(0), mLoopUVAnim(1), mRandomAnimStart(0),
+      mTileHoldTime(0), mNumTilesAcross(1), mNumTilesDown(1), mNumTilesTotal(1),
+      mStartingTile(0), unk3e0(1), unk3e4(1), mAttractors(this) {
     SetRelativeMotion(0, this);
     SetSubSamples(0);
 }
@@ -452,7 +452,7 @@ BEGIN_COPYS(RndParticleSys)
             COPY_MEMBER(mMeshEmitter)
             COPY_MEMBER(mFrameDrive)
             COPY_MEMBER(mPauseOffscreen)
-            unk3c4 = unk144 = 0;
+            mElapsedTime = unk144 = 0;
             COPY_MEMBER(mAnimateUVs)
             COPY_MEMBER(mLoopUVAnim)
             COPY_MEMBER(mRandomAnimStart)
@@ -498,7 +498,7 @@ float RndParticleSys::EndFrame() {
 
 void RndParticleSys::Enter() {
     mNeedForward = mFastForward;
-    unk3c4 = 0;
+    mElapsedTime = 0;
     RndPollable::Enter();
 }
 
@@ -713,4 +713,194 @@ RndParticle *RndParticleSys::FreeParticle(RndParticle *p) {
         mNumActive--;
         return ret;
     }
+}
+
+void RndParticleSys::MakeLocToRel(Transform &tf) {
+    if (mRelativeMotion == 1) {
+        if (mMotionParent == this) {
+            tf.Reset();
+            return;
+        }
+    }
+    Transpose(mRelativeXfm, tf);
+    Multiply(WorldXfm(), tf, tf);
+}
+
+void RndParticleSys::SetSubSamples(int num) {
+    mSubSamples = num;
+    Transpose(mRelativeXfm, mSubSampleXfm);
+    Multiply(WorldXfm(), mSubSampleXfm, mSubSampleXfm);
+}
+
+void RndParticleSys::FreeAllParticles() {
+    for (RndParticle *p = mActiveParticles; p != nullptr; p = FreeParticle(p))
+        ;
+    mEmitCount = 0;
+}
+
+void RndParticleSys::ExplicitParticles(int i1, bool b2, PartOverride &partOverride) {
+    if (b2) {
+        float frame = CalcFrame();
+        Transform tf;
+        MakeLocToRel(tf);
+        for (int i = 0; i < i1 && mNumActive < mMaxParticles; i++) {
+            RndParticle *p = AllocParticle();
+            if (!p)
+                break;
+            InitParticle(frame, p, &tf, partOverride);
+        }
+    } else {
+        unk3c0 += i1;
+    }
+}
+
+void RndParticleSys::InitParticle(RndParticle *p, const Transform *t) {
+    InitParticle(CalcFrame(), p, t, gNoPartOverride);
+}
+
+void RndParticleSys::SetRelativeMotion(float motion, RndTransformable *parent) {
+    mMotionParent = parent ? parent : this;
+    mRelativeMotion = motion;
+    mLastWorldXfm = mMotionParent->WorldXfm();
+    if (motion == 1) {
+        mRelativeXfm = mMotionParent->WorldXfm();
+    } else {
+        mRelativeXfm.Reset();
+    }
+    unk2b4.Zero();
+}
+
+DataNode RndParticleSys::OnSetStartColor(const DataArray *da) {
+    DataArray *arr1 = da->Array(2);
+    DataArray *arr2 = da->Array(3);
+    SetStartColor(
+        Hmx::Color(arr1->Float(0), arr1->Float(1), arr1->Float(2), arr1->Float(3)),
+        Hmx::Color(arr2->Float(0), arr2->Float(1), arr2->Float(2), arr2->Float(3))
+    );
+    return 0;
+}
+
+DataNode RndParticleSys::OnSetStartColorInt(const DataArray *da) {
+    Hmx::Color col1(da->Int(2));
+    Hmx::Color col2(da->Int(3));
+    col1.alpha = da->Float(4);
+    col2.alpha = da->Float(5);
+    SetStartColor(col1, col2);
+    return 0;
+}
+
+DataNode RndParticleSys::OnSetEndColor(const DataArray *da) {
+    DataArray *arr1 = da->Array(2);
+    DataArray *arr2 = da->Array(3);
+    SetEndColor(
+        Hmx::Color(arr1->Float(0), arr1->Float(1), arr1->Float(2), arr1->Float(3)),
+        Hmx::Color(arr2->Float(0), arr2->Float(1), arr2->Float(2), arr2->Float(3))
+    );
+    return 0;
+}
+
+DataNode RndParticleSys::OnSetEndColorInt(const DataArray *da) {
+    Hmx::Color col1(da->Int(2));
+    Hmx::Color col2(da->Int(3));
+    col1.alpha = da->Float(4);
+    col2.alpha = da->Float(5);
+    SetEndColor(col1, col2);
+    return 0;
+}
+
+DataNode RndParticleSys::OnSetEmitRate(const DataArray *da) {
+    SetEmitRate(da->Float(2), da->Float(3));
+    return 0;
+}
+
+DataNode RndParticleSys::OnAddEmitRate(const DataArray *da) {
+    float add = da->Float(2);
+    mEmitRate.x = Max(0.0f, mEmitRate.x + add);
+    mEmitRate.y = Max(0.0f, mEmitRate.y + add);
+    return !mEmitRate;
+}
+
+DataNode RndParticleSys::OnSetBurstInterval(const DataArray *da) {
+    SetMaxBurst(da->Int(2));
+    SetTimeBetweenBursts(da->Float(3), da->Float(4));
+    return 0;
+}
+
+DataNode RndParticleSys::OnSetBurstPeak(const DataArray *da) {
+    SetPeakRate(da->Float(2), da->Float(3));
+    return 0;
+}
+
+DataNode RndParticleSys::OnSetBurstLength(const DataArray *da) {
+    SetDuration(da->Float(2), da->Float(3));
+    return 0;
+}
+
+DataNode RndParticleSys::OnSetLife(const DataArray *da) {
+    SetLife(da->Float(2), da->Float(3));
+    return 0;
+}
+
+DataNode RndParticleSys::OnSetSpeed(const DataArray *da) {
+    SetSpeed(da->Float(2), da->Float(3));
+    return 0;
+}
+
+DataNode RndParticleSys::OnSetRotate(const DataArray *da) {
+    SetRotate(da->Int(2));
+    SetRPM(da->Float(3), da->Float(4));
+    SetRPMDrag(da->Float(4));
+    return 0;
+}
+
+DataNode RndParticleSys::OnSetSwingArm(const DataArray *da) {
+    SetStartOffset(da->Float(2), da->Float(3));
+    SetEndOffset(da->Float(4), da->Float(5));
+    return 0;
+}
+
+DataNode RndParticleSys::OnSetDrag(const DataArray *da) {
+    SetDrag(da->Float(2));
+    return 0;
+}
+
+DataNode RndParticleSys::OnSetAlignment(const DataArray *da) {
+    SetAlignWithVelocity(da->Int(2));
+    SetStretchWithVelocity(da->Int(3));
+    SetConstantArea(da->Int(4));
+    SetStretchScale(da->Float(5));
+    return 0;
+}
+
+DataNode RndParticleSys::OnSetStartSize(const DataArray *da) {
+    SetStartSize(da->Float(2), da->Float(3));
+    return 0;
+}
+
+DataNode RndParticleSys::OnSetMat(const DataArray *da) {
+    SetMat(da->Obj<RndMat>(2));
+    return 0;
+}
+
+DataNode RndParticleSys::OnSetPos(const DataArray *da) {
+    SetBoxExtent(
+        Vector3(da->Float(2), da->Float(3), da->Float(4)),
+        Vector3(da->Float(5), da->Float(6), da->Float(7))
+    );
+    return 0;
+}
+
+DataNode RndParticleSys::OnActiveParticles(const DataArray *da) {
+    return mActiveParticles != nullptr;
+}
+
+DataNode RndParticleSys::OnExplicitPart(const DataArray *da) {
+    ExplicitParticles(1, false, gNoPartOverride);
+    return 0;
+}
+
+DataNode RndParticleSys::OnExplicitParts(const DataArray *da) {
+    bool b = da->Size() >= 4 && da->Int(3);
+    ExplicitParticles(da->Int(2), b, gNoPartOverride);
+    return 0;
 }
