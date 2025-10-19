@@ -1150,7 +1150,7 @@ BinStream &operator>>(BinStreamRev &bs, ObjList<T> &oList) {
     for (std::list<T>::iterator it = oList.begin(); it != oList.end(); ++it) {
         bs >> *it;
     }
-    return bs;
+    return bs.stream;
 }
 
 // ObjectStage
