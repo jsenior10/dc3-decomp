@@ -169,6 +169,7 @@ public:
     int MaxBones() const { return GetGfxMode() != kOldGfx ? 40 : 4; }
     int NumBones() const { return mBones.size(); }
     void SetMutable(int m) { mGeomOwner->mMutable = m; }
+    int GetMutable() const { return mGeomOwner->mMutable; }
     void InstanceGeomOwnerBones();
     void DeleteBones(bool);
     void BurnXfm();

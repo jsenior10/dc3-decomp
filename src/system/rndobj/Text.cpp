@@ -6,6 +6,7 @@
 #include "rndobj/Draw.h"
 #include "rndobj/Font.h"
 #include "rndobj/Mat.h"
+#include "rndobj/Mesh.h"
 #include "rndobj/Trans.h"
 #include "utl/BinStream.h"
 #include "utl/UTF8.h"
@@ -331,4 +332,100 @@ void RndText::Init() {
     if (SystemLanguage() == kor)
         ui = 5;
     WordWrap_SetOption(ui);
+}
+
+void RndText::FontMap::SetFont(RndFontBase *f) {
+    MILO_ASSERT(f->ClassName() == RndFont::StaticClassName(), 0x75);
+    mFont = static_cast<RndFont *>(f);
+    while (mPages.size() > mFont->NumMats()) {
+        delete mPages.back();
+        mPages.pop_back();
+    }
+    mPages.reserve(mFont->NumMats());
+    while (mPages.size() < mFont->NumMats()) {
+        mPages.push_back(new Page());
+    }
+}
+
+void RndText::FontMap::ResetDisplayableChars() {
+    for (int i = 0; i < mPages.size(); i++) {
+        mPages[i]->displayableChars = 0;
+    }
+}
+
+void RndText::FontMap::IncrementDisplayableChars(unsigned short num) {
+    int page = mFont->CharPage(num);
+    if (page >= 0) {
+        mPages[page]->displayableChars++;
+    }
+}
+
+void ResetFontMapPageMeshFaces(RndMesh *, int);
+
+void RndText::FontMap::AllocateMeshes(RndText *text, int fixedLength) {
+    for (int i = 0; i < mPages.size(); i++) {
+        Page &page = *(mPages[i]);
+        if (!page.mesh && mFont && page.displayableChars > 0) {
+            page.mesh = Hmx::Object::New<RndMesh>();
+        }
+        RndMesh *mesh = page.mesh;
+        page.unkc = 0x1F;
+        page.unk8 = 0;
+        if (mesh) {
+            mesh->SetTransParent(text, false);
+            mesh->SetTransConstraint(
+                RndTransformable::kConstraintParentWorld, nullptr, false
+            );
+            if (mFont) {
+                mesh->SetMat(mFont->Mat(i));
+            }
+            mesh->SetShowing(page.displayableChars > 0);
+            if (fixedLength == 0) {
+                mesh->SetMutable(0);
+                ResetFontMapPageMeshFaces(mesh, page.displayableChars * 2);
+                page.unkc |= 0xA0;
+                mesh->Verts().resize(page.displayableChars * 4);
+            } else if (mesh->GetMutable() == 0
+                       || mesh->Verts().size() != fixedLength * 4) {
+                mesh->SetMutable(0x1F);
+                ResetFontMapPageMeshFaces(mesh, page.displayableChars * 2);
+                page.unkc |= 0xA0;
+                mesh->Verts().resize(page.displayableChars * 4);
+            }
+            MILO_ASSERT(mesh->Verts().size() >= page.displayableChars * 4, 0xD2);
+        }
+        MILO_ASSERT(!fixedLength || (page.displayableChars <= fixedLength), 0xD5);
+    }
+}
+
+void RndText::FontMap::CleanupSyncMeshes() {
+    for (int i = 0; i < mPages.size(); i++) {
+        Page &page = *(mPages[i]);
+        RndMesh *mesh = page.mesh;
+        if (mesh) {
+            for (RndMesh::Vert *it = mesh->Verts().begin(); page.unk8 != it; ++it) {
+                RndMesh::Vert *old = page.unk8;
+                page.unk8++;
+                old->pos.Zero();
+            }
+            mesh->Sync(page.unkc);
+        }
+    }
+}
+
+void RndText::FontMap::SetupScrolling() {
+    for (int i = 0; i < NumMeshes(); i++) {
+        RndMesh *mesh = Mesh(i);
+        if (mesh) {
+            mesh->SetTransConstraint(RndTransformable::kConstraintNone, nullptr, false);
+        }
+    }
+}
+
+void RndText::FontMap::UpdateScrolling(float f1) {
+    for (int i = 0; i < NumMeshes(); i++) {
+        RndMesh *mesh = Mesh(i);
+        if (mesh) {
+        }
+    }
 }

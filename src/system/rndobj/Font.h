@@ -76,6 +76,8 @@ public:
     RndMat *Mat(int) const;
     RndTex *ValidTexture(int) const;
     void SetCellSize(float, float);
+    int CharPage(unsigned short) const;
+    int NumMats() const { return mMats.size(); }
 
 protected:
     RndFont();

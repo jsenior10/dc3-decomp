@@ -147,9 +147,49 @@ public:
     class FontMap : public FontMapBase {
     public:
         // size 0x10
-        class Page {};
+        class Page {
+        public:
+            Page() : mesh(nullptr) {}
+            ~Page() {
+                if (mesh) {
+                    RELEASE(mesh);
+                }
+            }
+            MEM_OVERLOAD(Page, 0x115);
 
-        // fill out virtual stuff
+            RndMesh *mesh; // 0x0
+            int displayableChars; // 0x4
+            RndMesh::Vert *unk8; // 0x8
+            int unkc; // 0xc - mesh sync flags?
+        };
+
+        virtual ~FontMap();
+        virtual Symbol ClassName() const { return StaticClassName(); }
+        virtual void SetFont(RndFontBase *);
+        virtual RndFontBase *Font() const { return mFont; }
+        virtual int NumMeshes() const { return mPages.size(); }
+        virtual RndMesh *Mesh(int idx) const { return mPages[idx]->mesh; }
+        virtual int NumMaterials() const { return mPages.size(); }
+        virtual RndMat *Material(int idx) const { return mFont->Mat(idx); }
+        virtual void ResetDisplayableChars();
+        virtual void IncrementDisplayableChars(unsigned short);
+        virtual void AllocateMeshes(RndText *, int);
+        virtual void CleanupSyncMeshes();
+        virtual void SetupCharacter(
+            unsigned short,
+            float &,
+            float,
+            const StyleState &,
+            unsigned short,
+            float,
+            FitType,
+            float
+        );
+        virtual bool SupportsScrolling() const { return true; }
+        virtual void SetupScrolling();
+        virtual void UpdateScrolling(float);
+
+        static Symbol StaticClassName() { return "FontMap"; }
 
         bool unk4; // 0x4
         RndFont *mFont; // 0x8
