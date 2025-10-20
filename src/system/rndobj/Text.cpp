@@ -439,6 +439,20 @@ void RndText::FontMap::UpdateScrolling(float f1) {
     }
 }
 
+RndText::FontMap3d::~FontMap3d() {
+    for (int i = 0; i < mMeshes.size(); i++) {
+        RndMesh *mesh = mMeshes[i];
+        if (mesh) {
+            delete mesh;
+        }
+    }
+}
+
+void RndText::FontMap3d::SetFont(RndFontBase *f) {
+    MILO_ASSERT(f->ClassName() == RndFont3d::StaticClassName(), 0x17D);
+    mFont = static_cast<RndFont3d *>(f);
+}
+
 void RndText::SetFixedLength(int len) {
     if (mFixedLength != len) {
         mFixedLength = len;
@@ -543,4 +557,16 @@ void RndText::SetTextASCII(const char *cstr) {
         WideVectorToUTF8(vec, str);
     }
     SetText(str.c_str());
+}
+
+void RndText::QueueBlacklightPacket(RndMesh *mesh, float f2, int i3) {
+    int cursize = sBlacklightPacketPool.size();
+    if (sBlacklightPacketCount >= cursize) {
+        int newsize = 8;
+        if (cursize != 0) {
+            newsize = cursize * 2;
+        }
+        sBlacklightPacketPool.resize(newsize);
+    }
+    sBlacklightPacketCount++;
 }

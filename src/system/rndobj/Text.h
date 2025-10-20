@@ -2,6 +2,7 @@
 #include "math/Color.h"
 #include "math/Utl.h"
 #include "obj/Object.h"
+#include "os/Debug.h"
 #include "rndobj/Draw.h"
 #include "rndobj/FontBase.h"
 #include "rndobj/Font.h"
@@ -110,6 +111,7 @@ public:
 
     class BlacklightPacket {
     public:
+        int unk[8];
     };
 
     class FontMapBase {
@@ -143,7 +145,6 @@ public:
         MEM_OVERLOAD(FontMapBase, 0xD7);
 
         bool mBlacklight; // 0x4
-        RndFont *mFont; // 0x8
     };
 
     // size 0x18
@@ -197,6 +198,7 @@ public:
             return name;
         }
 
+        RndFont *mFont; // 0x8
         std::vector<Page *> mPages; // 0xc
     };
 
@@ -204,14 +206,17 @@ public:
     class FontMap3d : public FontMapBase {
     public:
         virtual ~FontMap3d();
-        virtual Symbol ClassName() const;
+        virtual Symbol ClassName() const { return StaticClassName(); }
         virtual void SetFont(RndFontBase *);
-        virtual RndFontBase *Font() const;
-        virtual int NumMeshes() const;
-        virtual RndMesh *Mesh(int idx) const;
-        virtual int NumMaterials() const;
-        virtual RndMat *Material(int idx) const;
-        virtual void ResetDisplayableChars();
+        virtual RndFontBase *Font() const { return mFont; }
+        virtual int NumMeshes() const { return mMeshes.size(); }
+        virtual RndMesh *Mesh(int idx) const { return mMeshes[idx]; }
+        virtual int NumMaterials() const { return mFont && mFont->Mat(); }
+        virtual RndMat *Material(int i) const {
+            MILO_ASSERT(i==0, 0x150);
+            return mFont->Mat();
+        }
+        virtual void ResetDisplayableChars() { mDisplayableChars = 0; }
         virtual void IncrementDisplayableChars(unsigned short);
         virtual void AllocateMeshes(RndText *, int);
         virtual void CleanupSyncMeshes();
@@ -228,6 +233,16 @@ public:
         virtual bool SupportsScrolling() const { return false; }
         virtual void SetupScrolling() {}
         virtual void UpdateScrolling(float) {}
+
+        static Symbol StaticClassName() {
+            static Symbol name("FontMap3d");
+            return name;
+        }
+
+        RndFont3d *mFont; // 0x8
+        int mDisplayableChars; // 0xc
+        std::vector<RndMesh *> mMeshes; // 0x10
+        int unk1c;
     };
 
     // Hmx::Object
@@ -272,6 +287,7 @@ protected:
     void DoBasicMarkup();
     void BuildFontMaps(bool);
 
+    static void QueueBlacklightPacket(RndMesh *, float, int);
     static FontMapBase *AcquireFontMap(RndFontBase *);
     static bool sBlacklightModeEnabled;
     static int sBlacklightPacketCount;
