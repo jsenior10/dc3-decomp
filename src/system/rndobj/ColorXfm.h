@@ -17,23 +17,11 @@ public:
     void Save(BinStream &) const;
     bool Load(BinStream &);
 
-    float &Hue() { return mHue; }
-    float &Saturation() { return mSaturation; }
-    float &Lightness() { return mLightness; }
-    float &Contrast() { return mContrast; }
-    float &Brightness() { return mBrightness; }
-    Hmx::Color &LevelInLo() { return mLevelInLo; }
-    Hmx::Color &LevelInHi() { return mLevelInHi; }
-    Hmx::Color &LevelOutLo() { return mLevelOutLo; }
-    Hmx::Color &LevelOutHi() { return mLevelOutHi; }
-    const Transform &ColorXfm() const { return mColorXfm; }
-
     RndColorXfm &operator=(const RndColorXfm &c) {
         memcpy(this, &c, sizeof(*this));
         return *this;
     }
 
-private:
     float mHue; // 0x0
     float mSaturation; // 0x4
     float mLightness; // 0x8

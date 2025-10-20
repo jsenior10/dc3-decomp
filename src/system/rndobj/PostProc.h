@@ -68,10 +68,8 @@ public:
     virtual void SetPriority(float f) { mPriority = f; }
     virtual void QueueMotionBlurObject(class RndDrawable *) {}
     virtual void SetBloomColor() {}
-    virtual void OnSelect();
-    virtual void OnUnselect();
     virtual void DoPost();
-    virtual float Priority(); // float at 0x4?
+    virtual float Priority() { return mPriority; }
     virtual const char *GetProcType() { return "RndPostProc"; }
 
     OBJ_MEM_OVERLOAD(0x22);
@@ -79,6 +77,16 @@ public:
 
     void Interp(const RndPostProc *, const RndPostProc *, float);
     void LoadRev(BinStreamRev &);
+    bool BlendPrevious() const;
+    float BloomIntensity() const;
+    bool HallOfTime() const;
+    bool DoChromaticAberration() const;
+    bool DoVignette() const;
+    bool DoMotionBlur() const;
+    bool DoGradientMap() const;
+    bool DoRefraction() const;
+    bool ColorXfmEnabled() const;
+    float EmulateFPS() const { return mEmulateFPS; }
 
     static RndPostProc *Current();
     static DOFOverrideParams &DOFOverrides() { return sDOFOverride; }
@@ -88,6 +96,13 @@ public:
 
 protected:
     RndPostProc();
+
+    virtual void OnSelect();
+    virtual void OnUnselect();
+
+    void UpdateTimeDelta();
+    void UpdateColorModulation();
+    void UpdateBlendPrevious();
 
     DataNode OnAllowedNormalMap(const DataArray *);
 

@@ -30,7 +30,7 @@ const Transform &RndEnviron::ColorXfm() const {
     static Vector3 z(0, 0, 1);
     static Transform ident(Hmx::Matrix3(x, y, z), Vector3(0, 0, 0));
     if (mUseColorAdjust)
-        return mColorXfm.ColorXfm();
+        return mColorXfm.mColorXfm;
     else
         return ident;
 }
@@ -89,15 +89,15 @@ BEGIN_PROPSYNCS(RndEnviron)
     SYNC_PROP(white_point, mWhitePoint)
     SYNC_PROP(tone_map, mUseToneMapping)
     SYNC_PROP(use_color_adjust, mUseColorAdjust)
-    SYNC_PROP_MODIFY(hue, mColorXfm.Hue(), mColorXfm.AdjustColorXfm())
-    SYNC_PROP_MODIFY(saturation, mColorXfm.Saturation(), mColorXfm.AdjustColorXfm())
-    SYNC_PROP_MODIFY(lightness, mColorXfm.Lightness(), mColorXfm.AdjustColorXfm())
-    SYNC_PROP_MODIFY(brightness, mColorXfm.Brightness(), mColorXfm.AdjustColorXfm())
-    SYNC_PROP_MODIFY(contrast, mColorXfm.Contrast(), mColorXfm.AdjustColorXfm())
-    SYNC_PROP_MODIFY(in_lo, mColorXfm.LevelInLo(), mColorXfm.AdjustColorXfm())
-    SYNC_PROP_MODIFY(in_hi, mColorXfm.LevelInHi(), mColorXfm.AdjustColorXfm())
-    SYNC_PROP_MODIFY(out_lo, mColorXfm.LevelOutLo(), mColorXfm.AdjustColorXfm())
-    SYNC_PROP_MODIFY(out_hi, mColorXfm.LevelOutHi(), mColorXfm.AdjustColorXfm())
+    SYNC_PROP_MODIFY(hue, mColorXfm.mHue, mColorXfm.AdjustColorXfm())
+    SYNC_PROP_MODIFY(saturation, mColorXfm.mSaturation, mColorXfm.AdjustColorXfm())
+    SYNC_PROP_MODIFY(lightness, mColorXfm.mLightness, mColorXfm.AdjustColorXfm())
+    SYNC_PROP_MODIFY(brightness, mColorXfm.mBrightness, mColorXfm.AdjustColorXfm())
+    SYNC_PROP_MODIFY(contrast, mColorXfm.mContrast, mColorXfm.AdjustColorXfm())
+    SYNC_PROP_MODIFY(in_lo, mColorXfm.mLevelInLo, mColorXfm.AdjustColorXfm())
+    SYNC_PROP_MODIFY(in_hi, mColorXfm.mLevelInHi, mColorXfm.AdjustColorXfm())
+    SYNC_PROP_MODIFY(out_lo, mColorXfm.mLevelOutLo, mColorXfm.AdjustColorXfm())
+    SYNC_PROP_MODIFY(out_hi, mColorXfm.mLevelOutHi, mColorXfm.AdjustColorXfm())
     SYNC_PROP(animate_from_preset, mAnimateFromPreset)
     SYNC_SUPERCLASS(RndDrawable)
     SYNC_SUPERCLASS(RndTransformable)
