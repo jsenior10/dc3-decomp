@@ -1,5 +1,6 @@
 #pragma once
 #include "math/Color.h"
+#include "math/Mtx.h"
 #include "obj/Data.h"
 #include "obj/Dir.h"
 #include "obj/Object.h"
@@ -85,6 +86,14 @@ public:
         mDirty |= 1;
     }
     void SetShaderOpts(const MatShaderOptions &opts) { mShaderOptions = opts; }
+    void SetTexXfm(const Transform &xfm) {
+        mTexXfm = xfm;
+        mDirty |= 2;
+    }
+    void SetDiffuseTex(RndTex *tex) {
+        mDiffuseTex = tex;
+        mDirty |= 2;
+    }
 
     void SetColorMod(const Hmx::Color &, int);
     void SetSpecularMap(RndTex *);

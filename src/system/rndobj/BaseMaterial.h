@@ -144,6 +144,8 @@ public:
     ZMode GetZMode() const { return mZMode; }
     bool IsNextPass(BaseMaterial *m);
     const Transform &TexXfm() const { return mTexXfm; }
+    const Hmx::Color &GetColor() const { return mColor; }
+    float Alpha() const { return mColor.alpha; }
 
 protected:
     BaseMaterial();
