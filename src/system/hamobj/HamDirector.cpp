@@ -41,6 +41,7 @@
 #include "utl/Symbol.h"
 #include "world/CameraManager.h"
 #include "world/Dir.h"
+#include <cctype>
 
 HamDirector *TheHamDirector;
 
@@ -1275,4 +1276,42 @@ void HamDirector::EnableFacialAnimation() {
             }
         }
     }
+}
+
+Symbol HamDirector::ClosestMove() {
+    Symbol out = unk2f0;
+    char buf[256];
+    Difficulty playerDiff = TheGameData->Player(0)->GetDifficulty();
+    if (playerDiff != kDifficultyExpert) {
+        if (mSongAnims[playerDiff]) {
+            SymbolKeys *keys =
+                dynamic_cast<SymbolKeys *>(GetPropKeys(playerDiff, "move"));
+            if (keys) {
+                Key<Symbol> *nearest =
+                    keys->KeyNearest(mSongAnims[playerDiff]->GetFrame());
+                if (nearest) {
+                    strcpy(buf, nearest->value.Str());
+                    char *chr = strchr(buf, 0x2E);
+                    if (chr)
+                        *chr = '\0';
+                    DataNode list = PracticeList(kDifficultyExpert);
+                    DataArray *listArr = list.Array();
+                    int i17 = -1;
+                    for (int i = 0; i < listArr->Size(); i++) {
+                        const char *str = listArr->Str(i);
+                        int numlower = 0;
+                        if (*str) {
+                            char *p = (char *)str;
+                            while (p[buf - str]) {
+                                if (tolower(p[buf - str]) != tolower(*p))
+                                    break;
+                                numlower++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return out;
 }

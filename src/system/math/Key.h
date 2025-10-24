@@ -1,4 +1,5 @@
 #pragma once
+#include "math/Utl.h"
 #include "os/Debug.h"
 #include "utl/BinStream.h"
 #include "utl/TextStream.h"
@@ -263,7 +264,29 @@ public:
         }
     }
 
-    Key<T1 *> KeyNearest(float);
+    Key<T1> *KeyNearest(float f1) {
+        int i4 = -1;
+        float diff = kHugeFloat;
+        int idx = KeyLessEq(f1);
+        if (idx >= 0 && idx < size()) {
+            diff = f1 - (*this)[idx].frame;
+            if (MaxEq(diff, kHugeFloat)) {
+                i4 = idx;
+            }
+        }
+        int next = idx + 1;
+        if (next >= 0 && next < size()) {
+            f1 = (*this)[next].frame - f1;
+            if (MaxEq(diff, f1)) {
+                i4 = next;
+            }
+        }
+        if (i4 == -1) {
+            return nullptr;
+        } else {
+            return &(*this)[i4];
+        }
+    }
 
     bool Linear(float f1, float &fref) const {
         if (size() == 0)
@@ -289,27 +312,53 @@ public:
     bool ReverseLinear(const float &fconst, float &fref) const {
         if (size() == 0)
             return false;
-        else {
-            if (size() == 1)
-                fref = front().frame;
-            else {
-                int numKeys = size();
-                int idx = Clamp<int>(0, numKeys - 2, ReverseKeyLessEq(fconst));
-                const Key<T1> &keyNow = (*this)[idx];
-                const Key<T1> &keyNext = (*this)[idx + 1];
-                Interp(
-                    keyNow.frame,
-                    keyNext.frame,
-                    (fconst - keyNow.value) / (keyNext.value - keyNow.value),
-                    fref
-                );
-            }
+        else if (size() == 1) {
+            fref = front().frame;
+            return true;
+        } else {
+            int idx = Clamp<int>(0, size() - 2, ReverseKeyLessEq(fconst));
+            const Key<T1> &keyNow = (*this)[idx];
+            const Key<T1> &keyNext = (*this)[idx + 1];
+            Interp(
+                keyNow.frame,
+                keyNext.frame,
+                (fconst - keyNow.value) / (keyNext.value - keyNow.value),
+                fref
+            );
             return true;
         }
     }
 
-    int ReverseKeyLessEq(const float &fref) const;
-    const T1 *Cross(float, float) const;
+    int ReverseKeyLessEq(const T1 &fref) const {
+        if (empty() || fref < front().value) {
+            return -1;
+        } else {
+            int i1 = 0;
+            int i2 = size();
+            while (i2 > i1 + 1) {
+                int newCnt = (i1 + i2) >> 1;
+                if (fref < (*this)[newCnt].value)
+                    i2 = newCnt;
+                else
+                    i1 = newCnt;
+            }
+            while (i1 + 1 < size() && (*this)[i1 + 1].value == (*this)[i1].value)
+                i1++;
+            return i1;
+        }
+    }
+
+    const T1 *Cross(float f1, float f2) const {
+        int idx = KeyLessEq(f1);
+        if (idx == -1)
+            return 0;
+        else {
+            if (f2 >= (*this)[idx].frame)
+                return 0;
+            else
+                return &(*this)[idx].value;
+        }
+    }
 };
 
 template <class T1, class T2>

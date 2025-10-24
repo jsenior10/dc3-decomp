@@ -127,6 +127,14 @@ inline bool MaxEq(T &x, const T &y) {
     return false;
 }
 
+// float specialization for the use of fsel instructions
+template <>
+inline bool MaxEq(float &x, const float &y) {
+    float tmp = x;
+    x = Max(x, y);
+    return tmp != x;
+}
+
 template <class T>
 inline const T Abs(T x) {
     if (x > 0)
