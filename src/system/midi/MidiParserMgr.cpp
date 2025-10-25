@@ -159,11 +159,8 @@ DataArray *MidiParserMgr::ParseText(const char *str, int tick) {
     char buf[256];
     StripEndBracket(buf, str + 1);
     DataArray *parsed = nullptr;
-    try {
-        TheDebug.SetTry(true);
-        parsed = DataReadString(buf);
-        TheDebug.SetTry(false);
-    } catch (const char *errMsg) {
+    MILO_TRY { parsed = DataReadString(buf); }
+    MILO_CATCH(errMsg) {
         parsed = nullptr;
         MILO_NOTIFY(MakeString(
             "MidiParser: %s, track %s, tick %d, event \"%s\" has bad format: %s",

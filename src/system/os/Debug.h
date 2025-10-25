@@ -3,7 +3,6 @@
 #include "utl/TextFileStream.h"
 #include <list>
 #include <string.h>
-// #include <setjmp.h>
 
 typedef void ExitCallbackFunc(void);
 typedef void FixedStringFunc(FixedString &);
@@ -92,6 +91,25 @@ extern const char *kAssertStr;
 #define MILO_NOTIFY(...) TheDebugNotifier << MakeString(__VA_ARGS__)
 #define MILO_NOTIFY_BETA(...) DebugBeta() << MakeString(__VA_ARGS__)
 #define MILO_LOG(...) TheDebug << MakeString(__VA_ARGS__)
+
+// Usage:
+// MILO_TRY {
+//     // The code to try
+// } MILO_CATCH(errMsg) {
+//     // Use errMsg here, e.g.:
+//     MILO_NOTIFY("An unexpected thing happened: %s", errMsg);
+// }
+#define MILO_TRY                                                                         \
+    try {                                                                                \
+        TheDebug.SetTry(true);                                                           \
+        do
+
+#define MILO_CATCH(name)                                                                 \
+    while (false)                                                                        \
+        ;                                                                                \
+    TheDebug.SetTry(false);                                                              \
+    }                                                                                    \
+    catch (const char *name)
 
 class DebugWarner {
 public:
