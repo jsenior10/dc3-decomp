@@ -21,133 +21,195 @@
 #include "utl/Loader.h"
 #include "utl/MakeString.h"
 #include "utl/Symbol.h"
+#include <cstdio>
 
 bool MoviePanel::sUseSubtitles;
 
-MoviePanel::MoviePanel()
-    : mMovies(), mRecent(), unk58(), unk60(0), unk64(0), unk68(0), unk6c(1), unk70(0),
-      unk74(0), unk78(0), unk7c(0.0f), unk80(0) {}
+#pragma region Hmx::Object
 
-bool MoviePanel::IsLoaded() const {
-    if (!unk58.Ready()) {
-        return false;
+MoviePanel::MoviePanel()
+    : mMovies(), mRecent(), mMovie(), mSubtitlesLoader(0), mSubtitles(0),
+      mCurrentSubtitleIndex(0), mSubtitleCleared(1), mSubtitleLabel(0), mPauseHintAnim(0),
+      mShowHint(0), mTimeShowHintStarted(0.0f), mShowMenu(0) {}
+
+BEGIN_HANDLERS(MoviePanel)
+    HANDLE_ACTION(set_paused, SetPaused(_msg->Int(2)))
+    HANDLE_ACTION(set_menu_shown, ShowMenu(_msg->Int(2)))
+    HANDLE_EXPR(is_menu_shown, mShowMenu)
+    HANDLE_ACTION(show_hint, ShowHint())
+    HANDLE_SUPERCLASS(UIPanel)
+END_HANDLERS
+
+BEGIN_PROPSYNCS(MoviePanel)
+    SYNC_PROP(show_menu, mShowMenu)
+    SYNC_SUPERCLASS(Hmx::Object)
+END_PROPSYNCS
+
+void MoviePanel::SetTypeDef(DataArray *d) {
+    UIPanel::SetTypeDef(d);
+    d->FindData("preload", mPreload, true);
+    d->FindData("audio", mAudio, true);
+    d->FindData("loop", mLoop, true);
+}
+
+#pragma endregion
+#pragma region UIPanel
+
+void MoviePanel::Load() {
+    UIPanel::Load();
+    mMovies.clear();
+    DataArray *config = SystemConfig("videos", Property("videos", true)->Str());
+    DataArray *files = config->FindArray("files");
+    for (int i = 1; i < files->Size(); i++) {
+        mMovies.push_back(files->Str(i));
     }
-    if (unk60 && !unk60->IsLoaded()) {
-        return false;
+    mFillWidth = false;
+    config->FindData("fill_width", mFillWidth, false);
+    bool localize = false;
+    config->FindData("localize", localize, false);
+    if (localize) {
+        mLanguage = Movie::LocalizationTrack();
+    } else {
+        mLanguage = 0;
     }
-    return UIPanel::IsLoaded();
+    if (sUseSubtitles && mMovies.size() == 1) {
+        char pathBuffer[256];
+        sprintf(pathBuffer, "ui/subtitles/eng/%s_keep.dta", FileGetBase(mMovies[0]));
+        const char *subtitlesPath;
+        bool local = FileIsLocal(pathBuffer);
+        bool cd = UsingCD();
+        if (!cd || local) {
+            subtitlesPath = pathBuffer;
+        } else {
+            subtitlesPath = MakeString(
+                "%s/gen/%s.dtb", FileGetPath(pathBuffer), FileGetBase(pathBuffer)
+            );
+        }
+
+        if (FileExists(subtitlesPath, 0, nullptr)) {
+            // bug? pathBuffer should probably be subtitlesPath
+            mSubtitlesLoader = new DataLoader(pathBuffer, kLoadFront, true);
+        }
+    }
+    ChooseMovie();
+}
+
+void MoviePanel::Draw() {
+    if (GetState() != kUnloaded && unk34 == GetFinalDrawPass())
+        mMovie.Draw();
+    UIPanel::Draw();
 }
 
 void MoviePanel::Enter() { UIPanel::Enter(); }
 
 void MoviePanel::Exit() {
     UIPanel::Exit();
-    if (unk38 == false) {
-        unk58.End();
+    if (mPreload == false) {
+        mMovie.End();
     }
-    unk80 = false;
-}
-
-void MoviePanel::Draw() {
-    if (GetState() != kUnloaded && unk34 == GetFinalDrawPass())
-        unk58.Draw();
-    UIPanel::Draw();
-}
-
-void MoviePanel::FinishLoad() {
-    UIPanel::FinishLoad();
-    if (unk60) {
-        unk64 = unk60->Data();
-        unk64->AddRef();
-        RELEASE(unk60);
-        if (mDir)
-            unk70 = mDir->Find<UILabel>("subtitles.lbl", false);
-    } else {
-        unk64 = 0;
-    }
-    if (mDir) {
-        unk74 = mDir->Find<RndAnimatable>("fade_pausehint.anim", true);
-    }
-}
-
-void MoviePanel::Unload() {
-    UIPanel::Unload();
-    if (unk38) {
-        unk58.End();
-    }
-    if (unk64) {
-        unk64->Release();
-        unk64 = nullptr;
-    }
-}
-
-void MoviePanel::SetTypeDef(DataArray *d) {
-    UIPanel::SetTypeDef(d);
-    d->FindData("preload", unk38, true);
-    d->FindData("audio", unk39, true);
-    d->FindData("loop", unk3a, true);
+    mShowMenu = false;
 }
 
 void MoviePanel::Poll() {
     UIPanel::Poll();
     if (GetState() == kUnloaded)
         return;
-    if (!unk58.Poll() && !TheUI->InTransition()) {
-        if (unk64 && unk70) {
+    if (!mMovie.Poll() && !TheUI->InTransition()) {
+        static Message movie_done("movie_done");
+        DataNode handled = HandleType(movie_done);
+        if (handled.Equal(DataNode(kDataUnhandled, 0), nullptr, true)) {
+            mMovie.End();
+            PlayMovie();
         }
-    }
-}
-
-void MoviePanel::Load() {
-    UIPanel::Load();
-    mMovies.clear();
-
-    DataArray *config = SystemConfig("videos", Property("videos", true)->Str());
-
-    DataArray *files = config->FindArray("files");
-    for (int i = 1; i < files->Size(); i++) {
-        mMovies.push_back(files->Str(i));
-    }
-
-    unk3b = false;
-    config->FindData("fill_width", unk3b, false);
-
-    bool localize = false;
-    config->FindData("localize", localize, false);
-    if (localize) {
-        unk3c = false;
     } else {
-        unk3c = Movie::LocalizationTrack();
-    }
-
-    if (sUseSubtitles && mMovies.size() == 1) {
-        char pathBuffer[256];
-        // sprintf(pathBuffer, "ui/subtitles/eng/%s_keep.dta", FileGetBase(mMovies[0]));
-        const char *subtitlesPath;
-        if (FileIsLocal(pathBuffer) && UsingCD()) {
-            subtitlesPath = MakeString(
-                "%s/gen/%s.dtb", FileGetPath(pathBuffer), FileGetBase(pathBuffer)
-            );
-        } else {
-            subtitlesPath = pathBuffer;
+        if (mSubtitles && mSubtitleLabel) {
+            int frame = mMovie.GetFrame();
+            DataArray *arr = mSubtitles->Array(mCurrentSubtitleIndex);
+            if (mSubtitleCleared) {
+                if (arr->Int(0) <= frame) {
+                    mSubtitleLabel->SetSubtitle(arr);
+                    mSubtitleCleared = false;
+                }
+            }
+            if (arr->Int(1) < frame) {
+                if (mSubtitles->Size() > mCurrentSubtitleIndex + 1) {
+                    DataArray *a2 = arr->Array(mCurrentSubtitleIndex + 1);
+                    if (a2) {
+                        if (a2->Int(0) <= frame) {
+                            mSubtitleLabel->SetSubtitle(a2);
+                            mSubtitleCleared = false;
+                            mCurrentSubtitleIndex++;
+                            goto lol;
+                        }
+                    }
+                }
+                if (!mSubtitleCleared) {
+                    mSubtitleLabel->SetTextToken(gNullStr);
+                    mSubtitleCleared = true;
+                }
+            }
         }
-
-        if (FileExists(subtitlesPath, 0, nullptr)) {
-            // unk60 = new DataLoader(FilePath(subtitlesPath), kLoadFront, true);
+    }
+lol:
+    if (mShowHint) {
+        float secs = TheTaskMgr.UISeconds();
+        if (secs < mTimeShowHintStarted) {
+            mTimeShowHintStarted = secs;
+        }
+        if (secs - mTimeShowHintStarted >= 3.0f) {
+            HideHint();
         }
     }
-
-    ChooseMovie();
 }
 
-void MoviePanel::SetPaused(bool b) { unk58.SetPaused(b); }
+bool MoviePanel::IsLoaded() const {
+    if (!mMovie.Ready()) {
+        return false;
+    }
+    if (mSubtitlesLoader && !mSubtitlesLoader->IsLoaded()) {
+        return false;
+    }
+    return UIPanel::IsLoaded();
+}
+
+void MoviePanel::Unload() {
+    UIPanel::Unload();
+    if (mPreload) {
+        mMovie.End();
+    }
+    if (mSubtitles) {
+        mSubtitles->Release();
+        mSubtitles = nullptr;
+    }
+}
+
+void MoviePanel::FinishLoad() {
+    UIPanel::FinishLoad();
+    if (mSubtitlesLoader) {
+        mSubtitles = mSubtitlesLoader->Data();
+        mSubtitles->AddRef();
+        RELEASE(mSubtitlesLoader);
+        if (mDir)
+            mSubtitleLabel = mDir->Find<UILabel>("subtitles.lbl", false);
+    } else {
+        mSubtitles = 0;
+    }
+    if (mDir) {
+        mPauseHintAnim = mDir->Find<RndAnimatable>("fade_pausehint.anim", true);
+    }
+}
+
+#pragma endregion
+#pragma region MoviePanel
+
+void MoviePanel::SetPaused(bool b) { mMovie.SetPaused(b); }
 
 void MoviePanel::HideHint() {
-    unk78 = false;
-    unk74->Animate(
-        unk74->GetFrame(),
-        unk74->StartFrame(),
-        unk74->Units(),
+    mShowHint = false;
+    mPauseHintAnim->Animate(
+        mPauseHintAnim->GetFrame(),
+        mPauseHintAnim->StartFrame(),
+        mPauseHintAnim->Units(),
         0,
         0.0f,
         0,
@@ -158,13 +220,13 @@ void MoviePanel::HideHint() {
 }
 
 void MoviePanel::ShowHint() {
-    if (unk74) {
-        unk78 = true;
-        unk7c = TheTaskMgr.UISeconds();
-        unk74->Animate(
-            unk74->GetFrame(),
-            unk74->EndFrame(),
-            unk74->Units(),
+    if (mPauseHintAnim) {
+        mShowHint = true;
+        mTimeShowHintStarted = TheTaskMgr.UISeconds();
+        mPauseHintAnim->Animate(
+            mPauseHintAnim->GetFrame(),
+            mPauseHintAnim->EndFrame(),
+            mPauseHintAnim->Units(),
             0.0f,
             0.0f,
             0,
@@ -176,16 +238,16 @@ void MoviePanel::ShowHint() {
 }
 
 void MoviePanel::PlayMovie() {
-    unk6c = true;
-    unk68 = 0;
-    unk58.BeginFromFile(
+    mSubtitleCleared = true;
+    mCurrentSubtitleIndex = 0;
+    mMovie.BeginFromFile(
         MakeString("videos/%s", mCurrentMovie),
         0.0f,
-        unk39 == 0,
-        unk3a,
-        unk38,
-        unk3b,
-        unk3c,
+        mAudio == 0,
+        mLoop,
+        mPreload,
+        mFillWidth,
+        mLanguage,
         0,
         kLoadFront
     );
@@ -209,20 +271,7 @@ void MoviePanel::ChooseMovie() {
 }
 
 void MoviePanel::ShowMenu(bool b) {
-    unk80 = b;
-    if (unk80)
+    mShowMenu = b;
+    if (mShowMenu)
         HideHint();
 }
-
-BEGIN_PROPSYNCS(MoviePanel)
-    SYNC_PROP(show_menu, unk80)
-    SYNC_SUPERCLASS(Hmx::Object)
-END_PROPSYNCS
-
-BEGIN_HANDLERS(MoviePanel)
-    HANDLE_ACTION(set_paused, SetPaused(_msg->Int(2)))
-    HANDLE_ACTION(set_menu_shown, ShowMenu(_msg->Int(2)))
-    HANDLE_EXPR(is_menu_shown, unk80)
-    HANDLE_ACTION(show_hint, ShowHint())
-    HANDLE_SUPERCLASS(UIPanel)
-END_HANDLERS

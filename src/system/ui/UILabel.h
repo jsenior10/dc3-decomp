@@ -1,4 +1,5 @@
 #pragma once
+#include "obj/Data.h"
 #include "obj/Object.h"
 #include "os/Debug.h"
 #include "rndobj/Text.h"
@@ -51,6 +52,7 @@ public:
     void SetTokenFmt(const DataArray *);
     RndText::Style &Style(int);
     void SetPrelocalizedString(String &);
+    void SetSubtitle(const DataArray *);
 
     template <class T1>
     void SetTokenFmt(Symbol s, T1 t1) {
