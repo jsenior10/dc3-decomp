@@ -32,7 +32,9 @@ public:
     void Draw();
     bool Poll();
     void SetWidthHeight(int, int);
+    FaderGroup *Faders() const { return mFaderGroup; }
 
+protected:
     FaderGroup *mFaderGroup; // 0x0
     MovieImpl *mImpl; // 0x4
 };

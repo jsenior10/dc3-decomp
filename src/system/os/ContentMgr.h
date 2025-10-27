@@ -59,10 +59,10 @@ public:
         virtual bool ContentTitleDiscovered(unsigned int, Symbol) { return true; }
         virtual void ContentMountBegun(int) {}
         virtual void ContentAllMounted() {}
-        virtual void ContentMounted(const char *, const char *) {}
-        virtual void ContentUnmounted(const char *) {}
-        virtual void ContentFailed(const char *) {}
-        virtual void ContentLoaded(class Loader *, ContentLocT, Symbol) {}
+        virtual void ContentMounted(const char *contentName, const char *) {}
+        virtual void ContentUnmounted(const char *contentName) {}
+        virtual void ContentFailed(const char *contentName) {}
+        virtual void ContentLoaded(class Loader *, ContentLocT location, Symbol) {}
         virtual void ContentDone() {}
         virtual const char *ContentPattern() { return ""; }
         virtual const char *ContentDir() { return "."; }

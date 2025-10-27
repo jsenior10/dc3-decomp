@@ -1,4 +1,5 @@
 #pragma once
+#include "meta/SongMgr.h"
 #include "obj/Data.h"
 #include "obj/Object.h"
 #include "os/ContentMgr.h"
@@ -18,57 +19,57 @@ public:
         kFadingOutSong = 5,
     };
 
+    SongPreview(const SongMgr &);
     // ContentMgr::Callback
     virtual ~SongPreview();
-    virtual void ContentMounted(char const *, char const *);
-    virtual void ContentFailed(char const *);
+    virtual void ContentMounted(const char *, const char *);
+    virtual void ContentFailed(const char *);
 
     // Hmx::Object
     virtual DataNode Handle(DataArray *, bool);
 
-    // unsure about these, will wait until TexMovie is filled out
-    // virtual ObjPtr<class TexMovie>::ObjPtr<class TexMovie>(void);
-    // virtual void ObjRefConcrete<class TexMovie, class ObjectDir>::SetObj();
-
-    SongPreview(class SongMgr const &);
     bool IsWaitingToDelete() const;
     bool IsFadingOut() const;
     void SetMusicVol(float);
     void Init();
     void Terminate();
-    void Start(class Symbol, class TexMovie *);
+    void Start(Symbol, TexMovie *);
     void PreparePreview();
     void Poll();
     DataNode OnStart(DataArray *);
+    void SetCrowdSingVol(float);
+    bool HasMovie() const { return mTexMovie && !mTexMovie->IsEmpty(); }
 
+    static const float kSilenceVal;
+
+private:
     const SongMgr &mSongMgr; // 0x30
-    Stream *unk34;
-    ObjPtr<TexMovie> unk38;
-    bool unk4c;
+    Stream *mStream; // 0x34
+    ObjPtr<TexMovie> mTexMovie; // 0x38
+    bool unk4c; // 0x4c - initted?
     Fader *mFader; // 0x50
     Fader *mMusicFader; // 0x54
     Fader *mCrowdSingFader; // 0x58
-    int unk5c;
-    float unk60;
-    float unk64;
-    float unk68;
-    bool unk6c;
-    bool unk6d;
-    bool unk6e;
-    bool unk6f;
-    int unk70;
-    Symbol unk74;
-    Symbol unk78;
-    float unk7c;
-    float unk80;
-    float unk84;
-    float unk88;
-    bool unk8c;
-    bool unk8d;
-    bool unk8e;
+    int mNumChannels; // 0x5c
+    float mAttenuation; // 0x60
+    float mFadeTime; // 0x64
+    float mPreviewDb; // 0x68
+    bool mRestart; // 0x6c
+    bool mLoopForever; // 0x6d
+    bool unk6e; // 0x6e
+    bool unk6f; // 0x6f
+    State mState; // 0x70
+    Symbol mSong; // 0x74
+    Symbol mSongContent; // 0x78
+    float mStartMs; // 0x7c
+    float mEndMs; // 0x80
+    float mStartPreviewMs; // 0x84
+    float mEndPreviewMs; // 0x88
+    bool mRegisteredWithCM; // 0x8c
+    bool unk8d; // 0x8d - preview currently playing?
+    bool mSecurePreview; // 0x8e
 
-private:
     void DetachFader(Fader *);
-    void PrepareFaders(class SongInfo const *);
+    void PrepareFaders(const SongInfo *);
     void PrepareSong(Symbol);
 };

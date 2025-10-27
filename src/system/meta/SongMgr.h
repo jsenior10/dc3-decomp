@@ -85,7 +85,7 @@ public:
     /** Do we have the supplied shortname in our list of available songs? */
     bool HasSong(Symbol shortname, bool fail) const;
     int GetCachedSongInfoSize() const;
-    bool IsSongMounted(Symbol) const;
+    bool IsSongMounted(Symbol shortname) const;
     bool SaveCachedSongInfo(BufStream &);
     /** Does the supplied content file name house the supplied song ID? */
     bool IsContentUsedForSong(Symbol contentName, int songID) const;
@@ -112,18 +112,21 @@ protected:
     virtual void ReadCachedMetadataFromStream(BinStream &, int) = 0;
     virtual void WriteCachedMetadataToStream(BinStream &) const = 0;
 
-    char const *CachedPath(Symbol, char const *, int) const;
+    char const *CachedPath(Symbol shortname, const char *, int version) const;
     void SaveMount();
     void SaveUnmount();
     void SaveWrite();
-    void GetSongsInContent(Symbol, std::vector<int> &) const;
-    char const *ContentNameRoot(Symbol) const;
-    int NumSongsInContent(Symbol) const;
-    void SetState(SongMgrState);
+    /** Given a content file name, get the file's song IDs. */
+    void GetSongsInContent(Symbol contentName, std::vector<int> &songIDs) const;
+    char const *ContentNameRoot(Symbol contentName) const;
+    int NumSongsInContent(Symbol contentName) const;
+    void SetState(SongMgrState state);
     void OnCacheMountResult(int result);
     void OnCacheWriteResult(int result);
     void OnCacheUnmountResult(int result);
-    void CacheSongData(DataArray *, DataLoader *, ContentLocT, Symbol);
+    void CacheSongData(
+        DataArray *, DataLoader *loader, ContentLocT location, Symbol contentName
+    );
 
     /** The available songs we can select in-game. Key = song ID */
     std::set<int> mAvailableSongs; // 0x30

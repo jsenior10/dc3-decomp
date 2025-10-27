@@ -38,7 +38,7 @@ public:
     SongInfoCopy(const SongInfo *);
     virtual ~SongInfoCopy();
     virtual Symbol GetName() const;
-    virtual const char *GetBaseFileName() const;
+    virtual const char *GetBaseFileName() const; //{ return mBaseFileName.c_str(); }
     virtual const char *GetPackageName() const;
     virtual const std::vector<TrackChannels> &GetTracks() const;
     virtual bool IsPlayTrackChannel(int) const;

@@ -2,47 +2,70 @@
 #include "SongMetadata.h"
 #include "SongMgr.h"
 #include "macros.h"
+#include "math/Utl.h"
+#include "meta/DataArraySongInfo.h"
 #include "movie/TexMovie.h"
 #include "obj/Data.h"
 #include "obj/Object.h"
 #include "obj/Task.h"
 #include "os/ContentMgr.h"
 #include "os/Debug.h"
+#include "os/File.h"
 #include "os/System.h"
 #include "synth/Faders.h"
+#include "synth/Synth.h"
 #include "utl/SongInfoCopy.h"
 #include "utl/Symbol.h"
 
+const float SongPreview::kSilenceVal = -48;
+
+#pragma region Hmx::Object
+
 SongPreview::SongPreview(const SongMgr &mgr)
-    : mSongMgr(mgr), unk34(0), unk38(this), unk4c(0), mFader(0), mMusicFader(0),
-      mCrowdSingFader(0), unk5c(0), unk60(0.0f), unk68(0.0f), unk70(0), unk7c(0.0f),
-      unk80(0.0f), unk84(0.0f), unk88(0.0f), unk8c(0), unk8d(0), unk8e(0) {}
-
-void SongPreview::ContentMounted(char const *contentName, char const *cc2) {
-    MILO_ASSERT(contentName, 0xbf);
-
-    Symbol s = Symbol(contentName);
-    if (s == unk78) {
-        unk78 = 0;
-    }
-}
-
-void SongPreview::ContentFailed(char const *contentName) {
-    MILO_ASSERT(contentName, 0xcb);
-
-    Symbol sym = contentName;
-    if (sym == unk78) {
-        unk74 = 0;
-        unk70 = 0;
-        unk78 = 0;
-    }
-}
+    : mSongMgr(mgr), mStream(0), mTexMovie(this), unk4c(0), mFader(0), mMusicFader(0),
+      mCrowdSingFader(0), mNumChannels(0), mAttenuation(0.0f), mPreviewDb(0.0f),
+      mState(kIdle), mStartMs(0.0f), mEndMs(0.0f), mStartPreviewMs(0.0f),
+      mEndPreviewMs(0.0f), mRegisteredWithCM(0), unk8d(0), mSecurePreview(0) {}
 
 SongPreview::~SongPreview() { Terminate(); }
 
-bool SongPreview::IsWaitingToDelete() const { return unk70 == 3; }
+BEGIN_HANDLERS(SongPreview)
+    HANDLE(start, OnStart)
+    HANDLE_ACTION(start_video, Start(_msg->Sym(2), _msg->Obj<TexMovie>(3)))
+    HANDLE_ACTION(set_music_vol, SetMusicVol(_msg->Float(2)))
+    HANDLE_ACTION(set_crowd_sing_vol, SetCrowdSingVol(_msg->Float(2)))
+    HANDLE_EXPR(get_song, mSong)
+    HANDLE_SUPERCLASS(Hmx::Object)
+END_HANDLERS
 
-bool SongPreview::IsFadingOut() const { return unk70 == 5; }
+#pragma endregion
+#pragma region ContentMgr::Callback
+
+void SongPreview::ContentMounted(const char *contentName, const char *) {
+    MILO_ASSERT(contentName, 0xbf);
+    Symbol s = contentName;
+    if (s == mSongContent) {
+        mSongContent = 0;
+    }
+}
+
+void SongPreview::ContentFailed(const char *contentName) {
+    MILO_ASSERT(contentName, 0xcb);
+    // it matches, don't question it
+    Symbol sym = contentName;
+    if (sym == mSongContent) {
+        mSong = 0;
+        Symbol zero = 0;
+        mState = kIdle;
+        mSongContent = zero;
+    }
+}
+
+#pragma endregion
+#pragma region SongPreview
+
+bool SongPreview::IsWaitingToDelete() const { return mState == kDeletingSong; }
+bool SongPreview::IsFadingOut() const { return mState == kFadingOutSong; }
 
 void SongPreview::SetMusicVol(float f) {
     if (unk4c == 0) {
@@ -55,28 +78,30 @@ void SongPreview::SetMusicVol(float f) {
     }
 }
 
+void SongPreview::SetCrowdSingVol(float f) {
+    if (unk4c)
+        mCrowdSingFader->DoFade(f, 0.0f);
+}
+
 void SongPreview::Init() {
-    if (unk4c) {
+    if (!unk4c) {
         unk4c = true;
-        unk74 = 0;
-        unk78 = 0;
-        if (unk34) {
-            // do something
-        }
-        unk34 = 0;
-        RELEASE(unk38);
-        unk70 = 0;
-        unk6c = true;
+        mSong = 0;
+        mSongContent = 0;
+        RELEASE(mStream);
+        mTexMovie = nullptr;
+        mState = kIdle;
+        mRestart = true;
         DataArray *cfg = SystemConfig("sound", "song_select");
-        cfg->FindData("loop_forever", unk6d, true);
-        cfg->FindData("fade_time", unk64, true);
-        cfg->FindData("attenuation", unk60, true);
-        cfg->FindData("preview_db", unk68, true);
-        unk64 *= 1000.0f;
+        cfg->FindData("loop_forever", mLoopForever, true);
+        cfg->FindData("fade_time", mFadeTime, true);
+        cfg->FindData("attenuation", mAttenuation, true);
+        cfg->FindData("preview_db", mPreviewDb, true);
+        mFadeTime *= 1000.0f;
         mFader = Hmx::Object::New<Fader>();
         mMusicFader = Hmx::Object::New<Fader>();
         mCrowdSingFader = Hmx::Object::New<Fader>();
-        mCrowdSingFader->SetVolume(-96.0f);
+        mCrowdSingFader->SetVolume(kDbSilence);
     }
 }
 
@@ -85,61 +110,66 @@ void SongPreview::Terminate() {
         unk4c = 0;
         DetachFader(mMusicFader);
         DetachFader(mCrowdSingFader);
-        unk74 = 0;
-        unk78 = 0;
-        RELEASE(unk34);
+        mSong = 0;
+        mSongContent = 0;
+        RELEASE(mStream);
         RELEASE(mFader);
         RELEASE(mMusicFader);
         RELEASE(mCrowdSingFader);
-
-        if (unk8c) {
+        mTexMovie = nullptr;
+        if (mRegisteredWithCM) {
             TheContentMgr.UnregisterCallback(this, true);
-            unk8c = 0;
+            mRegisteredWithCM = 0;
         }
     }
 }
 
-void SongPreview::Start(Symbol s, TexMovie *t) {
-    if (unk4c || s) {
+void SongPreview::Start(Symbol song, TexMovie *texMovie) {
+    if (unk4c || !song.Null()) {
         MILO_ASSERT(mFader && mMusicFader && mCrowdSingFader,0x6c);
-        unk38.SetObjConcrete(t);
-        if (s == unk74) {
+        mTexMovie = texMovie;
+        if (song == mSong) {
             unk8d = true;
         } else {
-            if (s) {
-                if (!mSongMgr.HasSong(s, false)) {
+            if (!song.Null()) {
+                if (!mSongMgr.HasSong(song, false)) {
                     return;
                 }
-                const SongMetadata *data =
-                    mSongMgr.Data(mSongMgr.GetSongIDFromShortName(s, true));
+                int songID = mSongMgr.GetSongIDFromShortName(song, true);
+                const SongMetadata *data = mSongMgr.Data(songID);
                 if (data && !data->IsVersionOK()) {
-                    s = gNullStr;
+                    song = gNullStr;
                 }
-                if (unk8c) {
+                if (!mRegisteredWithCM) {
                     TheContentMgr.RegisterCallback(this, false);
-                    unk8c = true;
+                    mRegisteredWithCM = true;
                 }
             }
-            unk6c = true;
-            mMusicFader->SetVolume(unk68);
-            mCrowdSingFader->SetVolume(-96.0f);
-            int x;
-            if (unk70 < 2) {
-                if (unk34) {
-                    // do something
+            mSong = song;
+            mRestart = true;
+            mMusicFader->SetVolume(mPreviewDb);
+            mCrowdSingFader->SetVolume(kDbSilence);
+            switch (mState) {
+            case kIdle:
+            case kMountingSong:
+                RELEASE(mStream);
+                mState = kIdle;
+                break;
+            case kPreparingSong:
+                mState = kDeletingSong;
+                break;
+            case kPlayingSong:
+                if (!song.Null()) {
+                    mFader->DoFade(kSilenceVal, mFadeTime);
+                    mState = kFadingOutSong;
+                } else {
+                    mFader->DoFade(kSilenceVal, 0);
+                    mState = kIdle;
                 }
-                x = 0;
-                unk34 = 0;
-            } else if (unk70 == 2) {
-                x = 3;
-            } else {
-                if (unk70 != 4)
-                    return;
-                else {
-                    mFader->DoFade(-48.0f);
-                }
+                break;
+            default:
+                break;
             }
-            unk70 = x;
         }
     }
 }
@@ -147,42 +177,156 @@ void SongPreview::Start(Symbol s, TexMovie *t) {
 void SongPreview::PreparePreview() {
     float previewstart = 0.0f;
     float previewend = 15000.0f;
-    if (unk84 != 0.0f || unk88 != 0.0f) {
-        previewend = unk84;
-        previewstart = unk88;
+    if (mStartPreviewMs != 0 || mEndPreviewMs != 0) {
+        previewstart = mStartPreviewMs;
+        previewend = mEndPreviewMs;
     } else {
-        int songid = mSongMgr.GetSongIDFromShortName(unk74, true);
+        int songid = mSongMgr.GetSongIDFromShortName(mSong, true);
         mSongMgr.Data(songid)->PreviewTimes(previewstart, previewend);
     }
-    unk7c = previewstart;
-    unk80 = previewend;
-    PrepareSong(unk74);
+    mStartMs = previewstart;
+    mEndMs = previewend;
+    PrepareSong(mSong);
+    if (!mLoopForever)
+        mRestart = false;
 }
 
-void SongPreview::Poll() {}
-
-DataNode SongPreview::OnStart(DataArray *arr) { return NULL_OBJ; }
+DataNode SongPreview::OnStart(DataArray *arr) {
+    mSecurePreview = false;
+    if (arr->Size() == 3) {
+        mStartPreviewMs = 0;
+        mEndPreviewMs = 0;
+        MILO_LOG("start called in upper OnStart here : sym='%s'\n", arr->ForceSym(2));
+    } else {
+        mStartPreviewMs = arr->Float(3);
+        mEndPreviewMs = arr->Float(4);
+        if (arr->Size() >= 6) {
+            mSecurePreview = arr->Int(5);
+        }
+        mSong = gNullStr;
+        MILO_LOG("start called in lower OnStart here : sym='%s'\n", arr->ForceSym(2));
+    }
+    Start(arr->ForceSym(2), nullptr);
+    return 1;
+}
 
 void SongPreview::DetachFader(Fader *f) {
-    if (unk34 && f) {
-        for (int i = 0; i < unk5c; i++) {
-            unk34->ChannelFaders(i)->Remove(f);
+    if (mStream && f) {
+        for (int i = 0; i < mNumChannels; i++) {
+            mStream->ChannelFaders(i)->Remove(f);
         }
     }
 }
 
-void SongPreview::PrepareFaders(SongInfo const *info) {
-    for (int i = 0; i < unk5c; i++) {
-        FaderGroup *f = unk34->ChannelFaders(i);
+void SongPreview::PrepareFaders(const SongInfo *info) {
+    for (int i = 0; i < mNumChannels; i++) {
+        FaderGroup *f = mStream->ChannelFaders(i);
         f->Add(mMusicFader);
     }
 }
 
-void SongPreview::PrepareSong(Symbol s) {}
+void SongPreview::PrepareSong(Symbol song) {
+    mState = kPreparingSong;
+    RELEASE(mStream);
+    DataArraySongInfo songInfo(mSongMgr.SongAudioData(song));
+    const char *filename = songInfo.GetBaseFileName();
+    if (mTexMovie) {
+        String str(mSongMgr.SongFilePath(song, "_prev.bik", 10));
+        if (FileExists(str.c_str(), 0, nullptr)) {
+            mTexMovie->SetFile(str.c_str());
+            mTexMovie->SetVolume(-mAttenuation);
+            mTexMovie->AddFader(mFader);
+            mTexMovie->AddFader(mMusicFader);
+            return;
+        }
+        mTexMovie->SetFile(gNullStr);
+    }
+    mStream = TheSynth->NewStream(filename, mStartMs, 0, mSecurePreview);
+    const std::vector<float> &pans = songInfo.GetPans();
+    const std::vector<float> &vols = songInfo.GetVols();
+    mNumChannels = pans.size();
+    for (int i = 0; i < mNumChannels; i++) {
+        mStream->SetVolume(i, vols[i]);
+        mStream->SetPan(i, pans[i]);
+    }
+    const TrackChannels *trackChannels = songInfo.FindTrackChannel(kAudioTypeMulti);
+    if (trackChannels) {
+        for (int i = 0; i < trackChannels->mChannels.size(); i++) {
+            mStream->SetVolume(trackChannels->mChannels[i], kDbSilence);
+        }
+    }
+    DetachFader(mMusicFader);
+    DetachFader(mCrowdSingFader);
+    PrepareFaders(&songInfo);
+    mStream->SetVolume(-mAttenuation);
+    mStream->Faders()->Add(mFader);
+}
 
-BEGIN_HANDLERS(SongPreview)
-//     HANDLE(start, OnStart)
-//     HANDLE_ACTION(start_video, action)
-//     HANDLE_ACTION(set_music_vol, SetMusicVol(_msg->Float(2)))
-//     HANDLE_SUPERCLASS(Hmx::Object)
-END_HANDLERS
+void SongPreview::Poll() {
+    switch (mState) {
+    case kIdle: {
+        if (!mSong.Null() && mRestart) {
+            const char *name = mSongMgr.ContentName(mSong, true);
+            if (name) {
+                mSongContent = name;
+                if (TheContentMgr.MountContent(name)) {
+                    mSongContent = 0;
+                }
+                mState = kMountingSong;
+            } else {
+                PreparePreview();
+            }
+        } else if (unk8d) {
+            mState = kFadingOutSong;
+            mFader->DoFade(kSilenceVal, mFadeTime);
+            unk8d = false;
+        }
+        break;
+    }
+    case kMountingSong: {
+        if (mSongContent.Null()) {
+            PreparePreview();
+        }
+        break;
+    }
+    case kPreparingSong: {
+        if (HasMovie()) {
+            mFader->SetVolume(0);
+        } else {
+            if (!mStream->IsReady()) {
+                return;
+            }
+            mFader->SetVolume(kSilenceVal);
+            mFader->DoFade(0, mFadeTime);
+            mStream->Play();
+        }
+        mState = kPlayingSong;
+        break;
+    }
+    case kDeletingSong: {
+        RELEASE(mStream);
+        mState = kIdle;
+        break;
+    }
+    case kPlayingSong: {
+        if (HasMovie() || mStream && mStream->GetTime() < mEndMs)
+            return;
+        MILO_LOG("mSong in Poll is %s\n", mSong);
+        mState = kFadingOutSong;
+        mFader->DoFade(kSilenceVal, mFadeTime);
+        break;
+    }
+    case kFadingOutSong: {
+        if (!mFader->IsFading()) {
+            RELEASE(mStream);
+            if (HasMovie()) {
+                mTexMovie->SetFile(gNullStr);
+            }
+            mState = kIdle;
+        }
+        break;
+    }
+    default:
+        break;
+    }
+}

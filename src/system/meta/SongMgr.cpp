@@ -117,22 +117,22 @@ void SongMgr::ContentUnmounted(char const *cc) {
     }
 }
 
-void SongMgr::ContentLoaded(Loader *loader, ContentLocT loct, Symbol s) {
+void SongMgr::ContentLoaded(Loader *loader, ContentLocT location, Symbol contentName) {
     DataLoader *d = dynamic_cast<DataLoader *>(loader);
     MILO_ASSERT(d, 0xDC);
     DataArray *data = d->Data();
     if (data) {
-        if (AllowContentToBeAdded(data, loct)) {
-            if (!streq(s.Str(), ".")) {
-                CacheSongData(data, d, loct, s);
+        if (AllowContentToBeAdded(data, location)) {
+            if (!streq(contentName.Str(), ".")) {
+                CacheSongData(data, d, location, contentName);
             } else {
-                AddSongData(data, d, loct);
+                AddSongData(data, d, location);
             }
         } else {
             std::vector<int> somevecidk;
             int datasize = data->Size();
             for (int i = datasize - CountSongsInArray(data); i < datasize; i++) {
-                int songID = GetSongID(data->Array(i), 0);
+                int songID = GetSongID(data->Array(i), nullptr);
                 auto idIt = mAvailableSongs.find(songID);
                 if (idIt != mAvailableSongs.end()) {
                     mAvailableSongs.erase(idIt);
@@ -142,10 +142,10 @@ void SongMgr::ContentLoaded(Loader *loader, ContentLocT loct, Symbol s) {
                     mContentUsedForSong.erase(contentIt);
                 }
             }
-            ClearFromCache(s);
+            ClearFromCache(contentName);
         }
     } else
-        ClearFromCache(s);
+        ClearFromCache(contentName);
 }
 
 void SongMgr::ContentDone() {
@@ -318,7 +318,7 @@ const char *SongMgr::ContentName(int songID) const {
 }
 
 int SongMgr::GetCachedSongInfoSize() const {
-    MemStream ms(false);
+    MemStream ms;
     ms << 0; // rev
     ms << mSongIDsInContent;
     WriteCachedMetadataToStream(ms);
@@ -338,8 +338,8 @@ const char *SongMgr::CachedPath(Symbol shortname, const char *cc, int version) c
     return cc;
 }
 
-bool SongMgr::IsSongMounted(Symbol s) const {
-    const char *name = ContentName(GetSongIDFromShortName(s, true));
+bool SongMgr::IsSongMounted(Symbol shortname) const {
+    const char *name = ContentName(GetSongIDFromShortName(shortname, true));
     if (name) {
         return TheContentMgr.IsMounted(name);
     } else
@@ -478,15 +478,15 @@ void SongMgr::SetState(SongMgrState state) {
 }
 
 void SongMgr::CacheSongData(
-    DataArray *arr, DataLoader *loader, ContentLocT loct, Symbol s
+    DataArray *arr, DataLoader *loader, ContentLocT location, Symbol contentName
 ) {
-    std::vector<int> vec;
-    GetSongsInContent(s, vec);
-    if (!vec.empty())
+    std::vector<int> contentSongs;
+    GetSongsInContent(contentName, contentSongs);
+    if (!contentSongs.empty())
         return;
     else {
         std::vector<int> otherIntVec;
-        AddSongData(arr, mCachedSongMetadata, ".", loct, otherIntVec);
+        AddSongData(arr, mCachedSongMetadata, ".", location, otherIntVec);
         std::vector<int> songIDs;
         for (int i = 0; i < arr->Size(); i++) {
             Symbol curSym = arr->Array(i)->Sym(0);
@@ -494,11 +494,11 @@ void SongMgr::CacheSongData(
             if (songID != 0)
                 songIDs.push_back(songID);
         }
-        mSongIDsInContent[s] = songIDs;
+        mSongIDsInContent[contentName] = songIDs;
         FOREACH (it, otherIntVec) {
             int id = *it;
             MILO_ASSERT(mContentUsedForSong.find(id) == mContentUsedForSong.end(), 0x2AF);
-            mContentUsedForSong[id] = s;
+            mContentUsedForSong[id] = contentName;
         }
         unkcc = true;
     }

@@ -40,6 +40,10 @@ public:
     NEW_OBJ(TexMovie);
     static void Init() { REGISTER_OBJ_FACTORY(TexMovie); }
 
+    void SetVolume(float vol) { mMovie.SetVolume(vol); }
+    void AddFader(Fader *f) { mMovie.Faders()->Add(f); }
+
+protected:
     ObjOwnerPtr<RndTex> mTex; // 0x48 ObjOwnerPtr | 0x54, RndTex
     bool unk5c;
     bool unk5d;
@@ -48,7 +52,6 @@ public:
     FilePath sRoot;
     Movie mMovie; // 0x68
 
-protected:
     TexMovie();
     void DoBeginMovieFromFile(BinStream *, LoaderPos);
     DataNode OnPlayMovie(DataArray *);
