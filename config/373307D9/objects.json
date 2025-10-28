@@ -968,7 +968,7 @@
             "system/utl/Pool.cpp": "MISSING",
             "system/utl/PoolAlloc.cpp": "NonMatching",
             "system/utl/Profiler.cpp": "NonMatching",
-            "system/utl/Song.cpp": "MISSING",
+            "system/utl/Song.cpp": "NonMatching",
             "system/utl/SongInfoAudioType.cpp": "NonMatching",
             "system/utl/SongInfoCopy.cpp": "NonMatching",
             "system/utl/Str.cpp": "NonMatching",

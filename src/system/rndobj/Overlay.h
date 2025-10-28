@@ -11,7 +11,7 @@ public:
     public:
         Callback() {}
         virtual ~Callback() {}
-        virtual float UpdateOverlay(RndOverlay *, float f2) { return f2; }
+        virtual float UpdateOverlay(RndOverlay *o, float y) { return y; }
     };
 
     virtual void Print(const char *);
