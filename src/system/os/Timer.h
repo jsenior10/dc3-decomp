@@ -91,7 +91,7 @@ public:
         if (mRunning <= 0)
             return;
 
-        unsigned long long cycle = __mftb();
+        unsigned int cycle = __mftb();
 
         mCycles += cycle - mStart;
         mStart = cycle;

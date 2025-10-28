@@ -8,11 +8,12 @@ public:
     void Start();
     void Stop();
 
-    char const *mName;
+private:
+    char const *mName; // 0x0
     Timer mTimer; // 0x8
-    float mMin;
-    float mMax;
-    float mSum;
-    int mCount;
-    int mCountMax;
+    float mMin; // 0x38
+    float mMax; // 0x3c
+    float mSum; // 0x40
+    int mCount; // 0x44
+    int mCountMax; // 0x48
 };
