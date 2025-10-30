@@ -1234,7 +1234,7 @@
             "xdk/LIBCMT/recalloc.cpp": "MISSING",
             "xdk/LIBCMT/rewind.cpp": "MISSING",
             "xdk/LIBCMT/rmtmp.cpp": "MISSING",
-            "xdk/LIBCMT/rtti.cpp": "MISSING",
+            "xdk/LIBCMT/rtti.cpp": "NonMatching",
             "xdk/LIBCMT/setjmp.cpp": "MISSING",
             "xdk/LIBCMT/setmode.cpp": "MISSING",
             "xdk/LIBCMT/sincos.cpp": "MISSING",

@@ -14,7 +14,6 @@ namespace std {
     class type_info {
     public:
         virtual ~type_info();
-        //   public: virtual void* __vecDelDtor(uint32_t);
 
         unsigned int hash_code() const;
         bool operator==(const type_info &rhs) const;
@@ -36,14 +35,20 @@ namespace std {
 
     class bad_cast : public exception {
     public:
+        bad_cast(const char *);
         virtual ~bad_cast() {}
-        virtual const char *what() const { return "bad_cast"; }
     };
 
     class bad_typeid : public exception {
     public:
+        bad_typeid(const char *);
         virtual ~bad_typeid() {}
-        virtual const char *what() const { return "bad_typeid"; }
+    };
+
+    class __non_rtti_object : public bad_typeid {
+    public:
+        __non_rtti_object(const char *);
+        virtual ~__non_rtti_object() {}
     };
 
 }

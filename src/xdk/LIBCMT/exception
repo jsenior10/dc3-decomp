@@ -7,6 +7,7 @@ namespace std {
     public:
         exception() : str(0), unk8(0) {}
         exception(const exception &e) : str(0), unk8(0) { *this = e; }
+        exception(const char *str) : str(0), unk8(0) { _Copy_str(str); }
         virtual ~exception() {
             if (unk8)
                 free((void *)str);
@@ -17,6 +18,10 @@ namespace std {
 
         exception &operator=(const exception &e);
 
+    private:
+        void _Copy_str(const char *);
+
+    protected:
         const char *str; // 0x4
         bool unk8; // 0x8
     };
