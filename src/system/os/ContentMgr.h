@@ -51,7 +51,6 @@ public:
 class RootContent : public Content {
 public:
     RootContent(const char *str) : mRoot(str) {}
-    virtual ~RootContent() {}
     virtual const char *Root() { return mRoot.c_str(); }
     virtual bool OnMemcard() { return false; }
     virtual ContentLocT Location() { return kLocationRoot; }
@@ -95,7 +94,7 @@ public:
 
     struct CallbackFile {
         CallbackFile(const char *cc1, Callback *cb, ContentLocT t, const char *cc2);
-        ~CallbackFile();
+        ~CallbackFile() {}
 
         FilePath mFile; // 0x0
         Callback *mCallback; // 0x8
@@ -153,6 +152,7 @@ protected:
         kDiscoveryLoading = 3,
         kDiscoveryCheckIfDone = 4,
         kMounting = 5,
+        kContentMgrState6 = 6
     } mState; // 0x2c
     std::list<Callback *> mCallbacks; // 0x30
     std::list<Content *> mContents; // 0x38
@@ -177,4 +177,7 @@ ContentReadFailureMsg(bool b, const char *cc) : Message(Type(), b, cc) {}
 // // represent
 // bool GetBool() const { return mData->Int(2); }
 // const char *GetStr() const { return mData->Str(3); }
+END_MESSAGE
+
+DECLARE_MESSAGE(ContentInstalledMsg, "content_installed")
 END_MESSAGE

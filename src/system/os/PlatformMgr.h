@@ -132,3 +132,6 @@ SigninChangedMsg(unsigned long u1, unsigned long u2) : Message(Type(), u1, u2) {
 int GetMask() const { return mData->Int(2); }
 int GetChangedMask() const { return mData->Int(3); }
 END_MESSAGE
+
+DECLARE_MESSAGE(StorageChangedMsg, "storage_changed")
+END_MESSAGE

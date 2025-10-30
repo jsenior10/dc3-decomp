@@ -22,6 +22,7 @@
 #include "xapilibi/xcontentcrosstitle.h"
 #include "xapilibi/xgetoverlappedextendederror.h"
 #include "xapilibi/xgetoverlappedresult.h"
+#include "xapilibi/xoverlap.h"
 #include "xapilibi/xthread.h"
 #include "xapilibi/xuser.h"
 #include "xapilibi/xusergetsignininfo.h"
