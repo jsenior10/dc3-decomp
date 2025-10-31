@@ -16,9 +16,11 @@ protected:
 
 public:
     User();
-    virtual DataNode Handle(DataArray *, bool);
+    // Hmx::Object
     virtual ~User() {}
+    virtual DataNode Handle(DataArray *, bool);
     virtual bool SyncProperty(DataNode &, DataArray *, int, PropOp);
+    // User
     virtual void Reset();
     virtual void SyncSave(BinStream &, unsigned int) const;
     virtual bool IsLocal() const = 0;
@@ -40,8 +42,8 @@ protected:
 
 public:
     LocalUser();
-    virtual DataNode Handle(DataArray *, bool);
     virtual ~LocalUser() {}
+    virtual DataNode Handle(DataArray *, bool);
     virtual int GetPadNum() const;
     virtual bool IsJoypadConnected() const;
     virtual bool HasOnlinePrivilege() const;

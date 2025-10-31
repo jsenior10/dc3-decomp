@@ -1,4 +1,5 @@
 #pragma once
+#include "CDReader.h"
 #include "os/File.h"
 #include "types.h"
 #include "utl/MemMgr.h"
@@ -13,18 +14,24 @@ public:
     virtual bool ReadAsync(void *, int);
     virtual int Write(const void *, int);
     virtual int Seek(int, int);
-    virtual int Tell();
+    virtual int Tell() { return mTell; }
     virtual void Flush() {}
-    virtual bool Eof();
-    virtual bool Fail();
-    virtual int Size();
-    virtual int UncompressedSize();
+    virtual bool Eof() { return (mSize - mTell) == 0; }
+    virtual bool Fail() { return mFail; }
+    virtual int Size() { return mSize; }
+    virtual int UncompressedSize() { return mUCSize; }
     virtual bool ReadDone(int &);
-    virtual bool GetFileHandle(void *&);
+    virtual bool GetFileHandle(void *&v) {
+        return CDReadExternal(v, mArkfileNum, mByteStart + mTell);
+    }
 
     void TaskDone(int);
 
-    MEM_OVERLOAD(ArkFile, 0x19);
+    static void *operator new(unsigned int s) {
+        return MemAlloc(s, __FILE__, 0x19, "ArkFile", 0);
+    }
+    static void *operator new(unsigned int s, void *place) { return place; }
+    static void operator delete(void *v) { MemFree(v, __FILE__, 0x19, "ArkFile"); }
 
     int mArkfileNum; // 0x4
     u64 mByteStart; // 0x8

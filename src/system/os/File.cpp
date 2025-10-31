@@ -108,8 +108,6 @@ bool FileMatch(const char *param1, const char *param2) {
     return (*param2 - *param1) == 0;
 }
 
-File::~File() {}
-
 const char *FrameRateSuffix() {
     return MakeString("_keep_%s.dta", PlatformSymbol(TheLoadMgr.GetPlatform()));
 }

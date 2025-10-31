@@ -222,6 +222,8 @@ void JoypadInitCommon(DataArray *);
 void JoypadTerminateCommon();
 void JoypadPollCommon();
 bool JoypadIsCalbertGuitar(int);
+int JoypadGetUsersPadNum(const LocalUser *);
+LocalUser *JoypadGetUserFromPadNum(int);
 }
 
 void JoypadReset();
@@ -231,3 +233,5 @@ Symbol JoypadControllerTypePadNum(int);
 void JoypadSubscribe(Hmx::Object *);
 void JoypadUnsubscribe(Hmx::Object *);
 void JoypadSetVibrate(int, bool);
+
+bool JoypadIsConnectedPadNum(int);

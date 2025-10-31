@@ -9,7 +9,7 @@ extern bool gNullFiles;
 class File {
 public:
     File() {}
-    virtual ~File();
+    virtual ~File() {}
     virtual class String Filename() const {
         class String str;
         return str;

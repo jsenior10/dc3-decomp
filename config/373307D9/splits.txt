@@ -2681,14 +2681,14 @@ system/os/ArkFile.cpp:
 	.text       start:0x825FA4F8 end:0x825FAE38
 	.data       start:0x82F12844 end:0x82F12860
 
-system/os/xbcapi.cpp:
+system/os/social/xbcapi.cpp:
 	.text       start:0x825FAE38 end:0x825FAE50
 
 system/os/json/xjson.cpp:
 	.pdata      start:0x822D2E18 end:0x822D2E30
 	.text       start:0x825FAE50 end:0x825FB038
 
-system/os/socialpostapi.cpp:
+system/os/social/socialpostapi.cpp:
 	.pdata      start:0x822D2E30 end:0x822D2E48
 	.text       start:0x825FB038 end:0x825FB750
 
@@ -2833,7 +2833,7 @@ system/os/AsyncFileHolmes.cpp:
 	.text       start:0x826056A8 end:0x82605960
 	.data       start:0x82F12BCC end:0x82F12BEC
 
-system/os/xbcimpl.cpp:
+system/os/social/xbcimpl.cpp:
 	.pdata      start:0x822D36D0 end:0x822D3708
 	.text       start:0x82605960 end:0x82606138
 	.data       start:0x82F12BEC end:0x82F12C08
@@ -2936,7 +2936,7 @@ system/os/xlrc/xlrctcptransport.cpp:
 	.pdata      start:0x822D3F68 end:0x822D3F98
 	.text       start:0x8260F680 end:0x8260F918
 
-system/os/xauth.cpp:
+system/os/social/xauth.cpp:
 	.rdata      start:0x82086984 end:0x820869A0
 	.pdata      start:0x822D3F98 end:0x822D3FA8
 	.text       start:0x8260F918 end:0x8260FBC0
@@ -12235,11 +12235,11 @@ xdk/xhv2/ulaw.cpp:
 xdk/xapilibi/callexitthread.cpp:
 	.data       start:0x82F5E224 end:0x82F5E22C rename:.bss
 
-system/os/precomp.cpp:
+system/os/social/precomp.cpp:
 	.data       start:0x8309B04C end:0x8309B050 rename:.bss
 	.data       start:0x8309B5D8 end:0x8309B5E0 rename:.bss
 
-system/os/pch.cpp:
+system/os/social/pch.cpp:
 	.data       start:0x8309B534 end:0x8309B538 rename:.bss
 	.data       start:0x830A1214 end:0x830A1270 rename:.bss
 

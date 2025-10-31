@@ -3,7 +3,7 @@
 #include "obj/Msg.h"
 #include "obj/Object.h"
 #include "os/User.h"
-#include "os/socialpostapi.h"
+#include "os/social/socialpostapi.h"
 #include "utl/JobMgr.h"
 
 enum DiskError {
