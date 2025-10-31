@@ -233,5 +233,16 @@ Symbol JoypadControllerTypePadNum(int);
 void JoypadSubscribe(Hmx::Object *);
 void JoypadUnsubscribe(Hmx::Object *);
 void JoypadSetVibrate(int, bool);
+JoypadAction ButtonToAction(JoypadButton, Symbol);
 
 bool JoypadIsConnectedPadNum(int);
+
+inline bool MovedLeftStick(JoypadButton btn) {
+    return btn == kPad_LStickUp || btn == kPad_LStickRight || btn == kPad_LStickDown
+        || btn == kPad_LStickLeft;
+}
+
+inline bool DirectionalAction(JoypadAction a) {
+    return a == kAction_Up || a == kAction_Down || a == kAction_Right
+        || a == kAction_Left;
+}

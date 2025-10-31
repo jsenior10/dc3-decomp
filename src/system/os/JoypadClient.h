@@ -11,6 +11,7 @@ public:
     void Start(JoypadButton, JoypadAction, int);
     void SendRepeat(Hmx::Object *, int);
     void Poll(float, float, Hmx::Object *, int);
+    void Reset(JoypadButton);
 
     JoypadButton mLastBtn; // 0x0
     JoypadAction mLastAction; // 0x4
@@ -27,6 +28,8 @@ public:
 
     JoypadClient(Hmx::Object *sink);
     void SetVirtualDpad(bool);
+    void PollClient() { Poll(); }
+    void SetRepeatMask(int);
 
     LocalUser *mUser; // 0x2c
     Hmx::Object *mSink; // 0x30
@@ -38,8 +41,8 @@ public:
     bool mFilterAllButStart; // 0x201
 
 private:
-    int OnMsg(ButtonDownMsg const &);
-    int OnMsg(ButtonUpMsg const &);
+    int OnMsg(const ButtonDownMsg &);
+    int OnMsg(const ButtonUpMsg &);
     void Poll();
     void Init();
 };
