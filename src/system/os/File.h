@@ -79,47 +79,80 @@ void FileTerminate();
 
 const char *FileMakePath(const char *root, const char *file);
 const char *FileRelativePath(const char *root, const char *filepath);
+const char *FileGetPath(const char *file);
+/** Given a file, get the extension. */
+const char *FileGetExt(const char *file);
+/** Given a file, get the drive the file resides in. */
+const char *FileGetDrive(const char *file);
+/** Given a file, get the base. (i.e. the file name, minus the extension.) */
+const char *FileGetBase(const char *file);
+/** Given a file, get the name. (i.e. the file name, plus the extension.) */
+const char *FileGetName(const char *file);
+
+const char *FileMakePathBuf(const char *iRoot, const char *iFilepath, char *oBuf);
 const char *FileRelativePathBuf(const char *, const char *, char *);
 
-const char *FileMakePathBuf(const char *, const char *, char *);
-const char *FileGetPath(const char *);
-const char *FileGetExt(const char *root);
-const char *FileGetDrive(const char *file);
-const char *FileGetBase(const char *file);
-const char *FileGetName(const char *file);
+/** Given a file, get the corresponding file stats.
+ * @param [in] iFilename The file.
+ * @param [out] iBuffer The file's stats.
+ * @returns 0 on success, -1 on failure.
+ */
 int FileGetStat(const char *iFilename, FileStat *iBuffer);
 
-int FileOpen(const char *iFilename, int iMode);
-int FileClose(int iFd);
-int FileDelete(const char *);
-int FileWrite(int iFd, void *iBuff, unsigned int iLen);
-int FileMkDir(const char *);
+// int FileOpen(const char *iFilename, int iMode);
+// int FileClose(int iFd);
+
+/** Try to delete a file.
+ * @param [in] iFilename The file to be deleted.
+ * @returns Nonzero on success, zero on failure.
+ */
+int FileDelete(const char *iFilename);
+
+// int FileWrite(int iFd, void *iBuff, unsigned int iLen);
+
+/** Try to make a directory.
+ * @param [in] iDirname The directory to be created.
+ * @returns Nonzero on success, zero on failure.
+ */
+int FileMkDir(const char *iDirname);
 
 void FileDiscSpinUp();
-void FileNormalizePath(const char *);
+
+/** Normalize the path of a given file.
+    (i.e. change '\'s to '/'s and make every letter lowercase.)
+ */
+void FileNormalizePath(const char *file);
 
 bool FileMatch(const char *, const char *);
 void FileEnumerate(
-    const char *, void (*)(const char *, const char *), bool, const char *, bool
+    const char *dir,
+    void (*cb)(const char *, const char *),
+    bool recurse,
+    const char *pattern,
+    bool
 );
 void FileRecursePattern(const char *, void (*)(char const *, char const *), bool);
 
 class BinStream &operator>>(class BinStream &, FileStat &);
 }
 
-File *NewFile(const char *, int);
+File *NewFile(const char *iFilename, int iMode);
 
 const char *FileRoot();
 const char *FileExecRoot();
 const char *FileSystemRoot();
 
-void FileQualifiedFilename(String &, const char *);
-void FileQualifiedFilename(char *, int, const char *);
-const char *FileLocalize(const char *iFilename, char *buffer);
+/** Given an input file name, get the full qualified file name: drive, folders, and all.
+    e.g. C:\Users\Username\Documents\file.txt */
+void FileQualifiedFilename(String &oNewName, const char *iOldName);
+/** Given an input file name, get the full qualified file name: drive, folders, and all.
+    e.g. C:\Users\Username\Documents\file.txt */
+void FileQualifiedFilename(char *oNewName, int unusedLmao, const char *iOldName);
 
+const char *FileLocalize(const char *iFilename, char *buffer);
 bool FileReadOnly(const char *filepath);
-bool FileExists(const char *filepath, int, String *);
-bool FileIsLocal(const char *);
-bool FileIsDLC(const char *);
+bool FileExists(const char *iFilename, int iMode, String *);
+/** Is this file inside the system's drive? */
+bool FileIsLocal(const char *file);
 
 String UniqueFilename(const char *c1, const char *c2);

@@ -120,18 +120,21 @@ BinStream &operator>>(BinStream &bs, FileEntry &entry) {
 }
 
 void Archive::Enumerate(
-    const char *cc, void (*func)(const char *, const char *), bool b3, const char *c4
+    const char *dir,
+    void (*cb)(const char *, const char *),
+    bool recurse,
+    const char *pattern
 ) {
     char buf[256];
     char buf2[256];
-    if (c4) {
-        const char *str = strstr(c4, ".dta");
+    if (pattern) {
+        const char *str = strstr(pattern, ".dta");
         if (str) {
-            sprintf(buf, "%s/gen/%s.dtb", FileGetPath(c4), FileGetBase(c4));
-            c4 = buf;
-            if (!b3) {
-                sprintf(buf2, "%s/gen/", cc);
-                cc = buf2;
+            sprintf(buf, "%s/gen/%s.dtb", FileGetPath(pattern), FileGetBase(pattern));
+            pattern = buf;
+            if (!recurse) {
+                sprintf(buf2, "%s/gen/", dir);
+                dir = buf2;
             }
         }
     }

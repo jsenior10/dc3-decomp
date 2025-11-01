@@ -39,10 +39,10 @@ void FileTerminate() {
     HolmesClientTerminate();
 }
 
-void FileQualifiedFilename(String &str, const char *cc) {
+void FileQualifiedFilename(String &out, const char *in) {
     char buf[256];
-    FileQualifiedFilename(buf, 0x100, cc);
-    str = buf;
+    FileQualifiedFilename(buf, 0x100, in);
+    out = buf;
 }
 
 void FileNormalizePath(const char *cc) {
@@ -155,9 +155,9 @@ void OnFrameRateRecurseCB(const char *cc1, const char *cc2) {
     gFrameRateArray->Insert(gFrameRateArray->Size(), str);
 }
 
-bool FileExists(const char *filepath, int iMode, String *str) {
+bool FileExists(const char *iFilename, int iMode, String *str) {
     MILO_ASSERT((iMode & ~FILE_OPEN_NOARK) == 0, 0x2A8);
-    File *theFile = NewFile(filepath, iMode | 0x40002);
+    File *theFile = NewFile(iFilename, iMode | 0x40002);
     if (theFile) {
         if (str) {
             *str = theFile->Filename();
@@ -222,7 +222,9 @@ const char *FileRelativePath(const char *root, const char *filepath) {
     return FileRelativePathBuf(root, filepath, relative);
 }
 
-File *NewFile(const char *cc, int i) {
+bool FileReadOnly(const char *filepath) { return true; }
+
+File *NewFile(const char *iFilename, int iMode) {
     if (gNullFiles) {
         return new NullFile();
     }

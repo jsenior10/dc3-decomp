@@ -44,7 +44,7 @@ typedef s32 HFILE;
 typedef HINSTANCE HMODULE;
 typedef LONG HRESULT;
 
-typedef void *PVOID;
+typedef void *LPVOID;
 typedef const void *LPCVOID;
 typedef BOOL *LPBOOL;
 typedef BYTE *LPBYTE;

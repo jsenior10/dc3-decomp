@@ -5,12 +5,11 @@
 extern "C" {
 #endif
 
-
 typedef HANDLE HMMIO;
 typedef LPSTR HPSTR;
 typedef LRESULT MMRESULT;
 
-typedef LRESULT (*LPMMIOPROC)(PVOID lpmmioinfo, UINT uMsg, LONG lParam1, LONG lParam2);
+typedef LRESULT (*LPMMIOPROC)(LPVOID lpmmioinfo, UINT uMsg, LONG lParam1, LONG lParam2);
 
 typedef struct _MMIOINFO {
     DWORD dwFlags; // 0x0
