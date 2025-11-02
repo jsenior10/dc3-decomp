@@ -1,9 +1,11 @@
 #pragma once
-
 #include "os/CritSec.h"
-#include "stl/_vector.h"
 #include "utl/FileStream.h"
+#include "utl/MemStream.h"
 #include "utl/Str.h"
+#include "xdk/win_types.h"
+#include <vector>
+
 class HDCache {
 public:
     HDCache();
@@ -18,32 +20,32 @@ public:
     bool WriteAsync(int, int, void const *);
     void Init();
 
-    int unk0;
-    std::vector<File *> unk4;
-    std::vector<File *> unkc;
-    int unk14;
-    int unk18;
-    int unk1c;
-    int unk20;
-    bool unk24;
-    int unk28;
-    int unk2c;
-    int unk30;
-    int unk34;
-    int mLockId; // 0x38
-    int unk3c;
-    CriticalSection *unk40;
-    int unk44;
-    int unk50;
-    String unk54;
-    String unk5c;
-    bool unk64;
-
 private:
     int HdrSize();
     FileStream *OpenHeader();
     void WriteHdr();
     void OpenFiles(int);
+    void Flush();
+
+    int **mBlockState; // 0x0
+    std::vector<File *> mReadArkFiles; // 0x4
+    std::vector<File *> mWriteArkFiles; // 0x10
+    int mWriteFileIdx; // 0x1c
+    int mWriteBlock; // 0x20
+    bool mWritingHeader; // 0x24
+    int mReadFileIdx; // 0x28
+    int mDirtyCache; // 0x2c
+    int mLastHdrWriteMs; // 0x30
+    int mLastCacheWriteMs; // 0x34
+    DWORD mLockId; // 0x38
+    int unk3c; // 0x3c
+    CriticalSection *mCritSec; // 0x40
+    int mHdrIdx; // 0x44
+    File *mHdr[2]; // 0x48
+    MemStream *mHdrBuf; // 0x50
+    String mHdrFmt; // 0x54
+    String mFileFmt; // 0x5c
+    bool unk64; // 0x64
 };
 
 extern HDCache TheHDCache;

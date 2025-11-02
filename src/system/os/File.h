@@ -33,6 +33,15 @@ public:
     virtual bool GetFileHandle(void *&) = 0;
     virtual bool Truncate(int) { return 0; }
 
+    bool ReadDone() {
+        int x;
+        return ReadDone(x);
+    }
+    bool WriteDone() {
+        int x;
+        return WriteDone(x);
+    }
+
     static int sOpenCount;
     static const int MaxFileNameLen;
 };

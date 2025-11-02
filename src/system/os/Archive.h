@@ -75,6 +75,7 @@ public:
     void SetLocationHardDrive();
     void Merge(Archive &shadow);
     bool Patched() const { return mIsPatched; }
+    int NumArkFiles() const { return mNumArkfiles; }
 
     static bool DebugArkOrder();
 
@@ -100,3 +101,5 @@ private:
 
 extern Archive *TheArchive;
 void ArchiveInit();
+
+extern const int kArkBlockSize;

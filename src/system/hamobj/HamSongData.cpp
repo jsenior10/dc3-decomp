@@ -65,7 +65,7 @@ void Validate(MemStream *ms, const char *cc, bool b) {
         if (HasFileChecksumData()) {
             StreamChecksumValidator v;
             if (v.Begin(cc, b)) {
-                v.Update((const unsigned char *)ms->Buffer(), ms->BufferSize());
+                v.Update((const unsigned char *)ms->Buffer(), ms->Size());
                 v.End();
                 v.Validate();
             }

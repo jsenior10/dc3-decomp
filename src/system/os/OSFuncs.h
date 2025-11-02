@@ -12,4 +12,6 @@ inline bool MainThread() {
     return false;
 }
 
+inline DWORD CurrentThreadId() { return GetCurrentThreadId(); }
+
 bool ValidateThreadId(unsigned long);
