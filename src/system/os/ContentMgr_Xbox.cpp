@@ -8,11 +8,7 @@
 #include "os/Debug.h"
 #include "os/PlatformMgr.h"
 #include "os/System.h"
-#include "xdk/xapilibi/closehandle.h"
-#include "xdk/xapilibi/xcontentcrosstitle.h"
-#include "xdk/xapilibi/xgetoverlappedresult.h"
-#include "xdk/xapilibi/xoverlap.h"
-#include "xdk/xapilibi/xuser.h"
+#include "xdk/XAPILIB.h"
 
 std::vector<String> gIgnoredContent;
 XboxContentMgr gContentMgr;

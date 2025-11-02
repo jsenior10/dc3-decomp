@@ -4,7 +4,6 @@
 #include "os/File.h"
 #include "os/System.h"
 #include "xdk/XAPILIB.h"
-#include "xdk/xapilibi/closehandle.h"
 #include <cstdio>
 
 bool FileIsLocal(const char *file) {

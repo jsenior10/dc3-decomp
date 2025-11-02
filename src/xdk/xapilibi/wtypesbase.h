@@ -11,8 +11,6 @@ typedef struct _SECURITY_ATTRIBUTES {
     BOOL bInheritHandle;
 } SECURITY_ATTRIBUTES, *PSECURITY_ATTRIBUTES, *LPSECURITY_ATTRIBUTES;
 
-BOOL CreateDirectoryA(LPCSTR lpPathName, LPSECURITY_ATTRIBUTES lpSecurityAttributes);
-
 #ifdef __cplusplus
 }
 #endif

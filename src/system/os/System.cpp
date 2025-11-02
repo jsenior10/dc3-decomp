@@ -39,7 +39,7 @@
 #include "utl/Str.h"
 #include "utl/Symbol.h"
 #include "utl/TimeConversion.h"
-#include "xdk/xapilibi/gettime.h"
+#include "xdk/XAPILIB.h"
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>

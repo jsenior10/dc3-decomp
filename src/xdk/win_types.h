@@ -8,6 +8,7 @@ extern "C" {
 
 #define CONST const
 
+typedef void VOID;
 typedef int BOOL;
 typedef u8 BYTE;
 typedef u16 WORD;
@@ -15,6 +16,7 @@ typedef u32 DWORD;
 typedef u64 DWORDLONG;
 typedef u32 DWORD32;
 typedef u64 DWORD64;
+typedef DWORD SIZE_T;
 
 typedef char CCHAR;
 typedef char CHAR;
@@ -29,8 +31,15 @@ typedef s32 LONG;
 typedef s64 LONGLONG;
 typedef s32 LONG_PTR;
 typedef s32 LONG32;
+typedef u32 ULONG_PTR;
 typedef s64 LONG64;
+typedef s64 LARGE_INTEGER;
+typedef s64 *PLARGE_INTEGER;
 typedef u64 ULONGLONG;
+typedef u64 ULARGE_INTEGER;
+typedef u64 *PULARGE_INTEGER;
+typedef LONG *PLONG;
+typedef LONG *LPLONG;
 typedef LONG_PTR LPARAM;
 typedef LONG_PTR LRESULT;
 typedef float FLOAT;

@@ -77,10 +77,6 @@
 #include "utl/Option.h"
 #include "utl/TextStream.h"
 #include "xdk/XAPILIB.h"
-#include "xdk/xapilibi/closehandle.h"
-#include "xdk/xapilibi/setevent.h"
-#include "xdk/xapilibi/waitforsingleobject.h"
-#include "xdk/xapilibi/xthread.h"
 
 // Rnd & TheRnd;
 bool gNotifyKeepGoing;
