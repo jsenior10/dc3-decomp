@@ -10,6 +10,8 @@
 #include "utl/BinStream.h"
 #include "utl/FileStream.h"
 #include "utl/HxGuid.h"
+#include "utl/MemStream.h"
+#include "utl/Option.h"
 
 HDCache TheHDCache;
 
@@ -93,7 +95,7 @@ bool HDCache::WriteDone() {
     return mWriteBlock == -1;
 }
 
-void HDCache::Flush() {}
+// void HDCache::Flush() {}
 
 void HDCache::Poll() {
     if (mWritingHeader) {
@@ -119,37 +121,6 @@ bool HDCache::ReadAsync(int arkfileNum, int blockNum, void *) {
     }
     MILO_ASSERT(mReadArkFiles[arkfileNum]->Size() >= ((blockNum + 1) * kArkBlockSize), 0x19D);
     mReadFileIdx = arkfileNum;
-    //   iVar2 = (param_1 & 0x3fffffff) << 2;
-    //   if (*(iVar2 + *this) != 0) {
-    //     iVar4 = Archive::GetArkfileNumBlocks(TheArchive,param_1);
-    //     if (iVar4 <= param_2) {
-    //       local_60[0] = 0x196;
-    //       pcVar3 = MakeString<>(kAssertStr,"HDCache.cpp",local_60,
-    //                             "blockNum <
-    //                             TheArchive->GetArkfileNumBlocks(arkfileNum)");
-    //       Debug::Fail(&TheDebug,pcVar3,0x0);
-    //     }
-    //     if ((*(*(iVar2 + *this) + ((param_2 >> 5) + (param_2 < 0 && (param_2 & 0x1fU)
-    //     != 0)) * 4) &
-    //         1 << (param_2 - (((param_2 >> 5) + (param_2 < 0 && (param_2 & 0x1fU) != 0)
-    //         & 0xffffffff) <<
-    //                         5) & 0x3fU)) != 0) {
-    //       iVar4 = (**(**(*(this + 4) + iVar2) + 0x2c))();
-    //       if (iVar4 < (param_2 + 1) * 0x10000) {
-    //         local_60[0] = 0x19d;
-    //         pcVar3 = MakeString<>(kAssertStr,"HDCache.cpp",local_60,
-    //                               "mReadArkFiles[arkfileNum]->Size() >= ((blockNum + 1)
-    //                               * kArkBlockSize) "
-    //                              );
-    //         Debug::Fail(&TheDebug,pcVar3,0x0);
-    //       }
-    //       *(this + 0x28) = param_1;
-    //       (**(**(*(this + 4) + iVar2) + 0x18))(*(*(this + 4) + iVar2),param_2 *
-    //       0x10000,0); piVar1 = *(*(this + 0x28) * 4 + *(this + 4)); uVar6 = (**(*piVar1
-    //       + 0xc))(piVar1,param_3,0x10000); return uVar6;
-    //     }
-    //   }
-    //   return false;
     return false;
 }
 
@@ -227,4 +198,95 @@ void HDCache::WriteHdr() {
     }
 }
 
-// void HDCache::OpenFiles(int) {}
+void HDCache::OpenFiles(int numCachedArkfiles) {
+    if (mFileFmt.empty())
+        return;
+    int numArkfiles = TheArchive->NumArkFiles();
+    MILO_ASSERT(numCachedArkfiles <= numArkfiles, 0x22F);
+    FileMkDir(FileGetPath(mFileFmt.c_str()));
+    std::vector<int> pendingArkfiles;
+    for (int i = 0; i < numArkfiles; i++) {
+        const char *fileFmt = MakeString(mFileFmt.c_str(), i);
+        bool exists = FileExists(fileFmt, 0x10000, nullptr);
+        int prio = TheArchive->GetArkfileCachePriority(i);
+        if (exists && i > numCachedArkfiles) {
+            FileDelete(fileFmt);
+        }
+        if (prio >= 0) {
+            pendingArkfiles.push_back(i);
+        }
+    }
+    const char *hdrFmt = MakeString(mHdrFmt.c_str(), 0);
+    mHdr[0] = NewFile(hdrFmt, 0x50101);
+    bool i11 = mHdr[0] && !mHdr[0]->Fail();
+    if (i11) {
+        int hdrSize = HdrSize();
+        mHdr[0]->Truncate(hdrSize);
+        RELEASE(mHdr[0]);
+        mHdr[0] = NewFile(hdrFmt, 0x50001);
+        i11 = (hdrSize - mHdr[0]->Size()) == 0;
+    }
+    if (!i11) {
+        RELEASE(mHdr[0]);
+    } else {
+        while (pendingArkfiles.size() != 0) {
+            int i5 = -1;
+            auto max = pendingArkfiles.begin();
+            MILO_ASSERT(max != pendingArkfiles.end(), 0x26F);
+            // there's a pendingArkfiles iteration somewhere here
+            const char *fileFmt = MakeString(mFileFmt.c_str(), i5);
+            File *file = NewFile(fileFmt, 0x50101);
+            pendingArkfiles.erase(max);
+        }
+        for (int i = 0; i < numArkfiles; i++) {
+            const char *fileFmt = MakeString(mFileFmt.c_str(), i);
+            File *write = NewFile(fileFmt, 0x50002);
+            File *read = NewFile(fileFmt, 0x50001);
+            if (write && read && !write->Fail() && !read->Fail()) {
+                mReadArkFiles[i] = read;
+                mWriteArkFiles[i] = write;
+            }
+        }
+    }
+}
+
+void HDCache::Init() {
+    mCritSec = new CriticalSection();
+    if (TheArchive) {
+        if (OptionBool("no_hdcache", true)) {
+            Flush();
+        }
+        int numArkfiles = TheArchive->NumArkFiles();
+        mReadArkFiles.resize(numArkfiles);
+        mWriteArkFiles.resize(numArkfiles);
+        FileStream *header = OpenHeader();
+        bool next = header && header->Size() == HdrSize();
+        if (next) {
+            header->EnableReadEncryption();
+            int version;
+            *header >> version;
+            next = version == 2;
+        }
+        if (next) {
+            HxGuid guid1, guid2;
+            *header >> guid1;
+            TheArchive->GetGuid(guid2);
+            next = guid1 == guid2;
+        }
+        int numFilesToOpen = 0;
+        if (next) {
+            *header >> numFilesToOpen;
+            if (numFilesToOpen < 0 || numFilesToOpen > numArkfiles) {
+                numFilesToOpen = 0;
+                next = false;
+            }
+        }
+        OpenFiles(numFilesToOpen);
+        mBlockState = new int *[numArkfiles];
+        CSHA1 sha;
+        // more
+    }
+    mHdrFmt = "";
+    mFileFmt = "";
+    mHdrBuf = new MemStream(true);
+}
