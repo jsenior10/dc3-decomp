@@ -476,6 +476,9 @@ JoypadAction ButtonToAction(JoypadButton btn, Symbol sym) {
 void JoypadPushThroughMsg(const Message &msg) { Export(msg); }
 
 void JoypadHandleBreedDataResponse(int pad) {
+    if (gJoypadData[pad].unk94) {
+        memcpy(gJoypadData[pad].unk94, &gJoypadData[pad].unk88, sizeof(BreedData));
+    }
     JoypadBreedDataReadMsg msg(gJoypadData[pad].mUser, (JoypadBreedDataStatus)0);
     if (gJoypadData[pad].unk84) {
         gJoypadData[pad].unk84->Handle(msg, true);

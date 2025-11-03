@@ -138,6 +138,19 @@ enum JoypadType {
 enum JoypadBreedDataStatus {
 };
 
+// size 0xC
+struct BreedData {
+    unsigned char mVendor; // 0x0
+    unsigned char mProject; // 0x1
+    unsigned char mPeripheralType; // 0x2
+    unsigned char mPlatform; // 0x3
+    unsigned char mFactory; // 0x4
+    unsigned char mDesignIter; // 0x5
+    unsigned short mManuDate; // 0x6
+    unsigned short mIdent; // 0x8
+    unsigned char unka; // 0xa
+};
+
 // size 0xDC
 class JoypadData {
 public:
@@ -171,11 +184,8 @@ public:
     bool mHasBlueCymbal; // 0x82
     bool mHasSecondaryPedal; // 0x83
     Hmx::Object *unk84; // 0x84 - some sort of Hmx::Object*
-    // 0x88 - 0x90 inclusive may be some struct?
-    int unk88;
-    int unk8c;
-    int unk90;
-    int unk94; // ptr to some struct
+    BreedData unk88; // 0x88
+    BreedData *unk94; // 0x94
     int unk98;
     int unk9c;
     int unka0;
@@ -232,6 +242,8 @@ int ButtonToVelocityBucket(JoypadData *data, JoypadButton btn);
 void JoypadSetActuatorsImp(int, int, int);
 void AssociateUserAndPad(LocalUser *iUser, int iPadNum);
 void ResetAllUsersPads();
+
+bool requestBreedWrite(int, unsigned char *);
 }
 
 void JoypadInit();

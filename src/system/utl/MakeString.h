@@ -156,3 +156,32 @@ const char *MakeString(
     fs << t1 << t2 << t3 << t4 << t5 << t6 << t7 << t8 << t9;
     return fs.Str();
 }
+
+template <
+    class T1,
+    class T2,
+    class T3,
+    class T4,
+    class T5,
+    class T6,
+    class T7,
+    class T8,
+    class T9,
+    class T10>
+const char *MakeString(
+    const char *c,
+    const T1 &t1,
+    const T2 &t2,
+    const T3 &t3,
+    const T4 &t4,
+    const T5 &t5,
+    const T6 &t6,
+    const T7 &t7,
+    const T8 &t8,
+    const T9 &t9,
+    const T10 &t10
+) {
+    FormatString fs(c);
+    fs << t1 << t2 << t3 << t4 << t5 << t6 << t7 << t8 << t9 << t10;
+    return fs.Str();
+}
