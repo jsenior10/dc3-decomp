@@ -83,6 +83,11 @@ typedef struct _BY_HANDLE_FILE_INFORMATION {
 #define FILE_FLAG_OPEN_NO_RECALL            0x00100000
 // clang-format on
 
+// Move methods for SetFilePointer
+#define FILE_BEGIN 0
+#define FILE_CURRENT 1
+#define FILE_END 2
+
 BOOL CreateDirectoryA(LPCSTR lpPathName, LPSECURITY_ATTRIBUTES lpSecurityAttributes);
 HANDLE CreateFileA(
     LPCSTR lpFileName,
