@@ -25,9 +25,9 @@ public:
 
     virtual ~CacheMgr();
     virtual void Poll() = 0;
-    virtual bool SearchAsync(char const *, CacheID **);
+    virtual bool SearchAsync(const char *, CacheID **);
     virtual bool
-    ShowUserSelectUIAsync(LocalUser *, u64, char const *, char const *, CacheID **);
+    ShowUserSelectUIAsync(LocalUser *, u64, const char *, const char *, CacheID **);
     virtual bool
     CreateCacheIDFromDeviceID(unsigned int, const char *, const char *, CacheID **);
     virtual bool
