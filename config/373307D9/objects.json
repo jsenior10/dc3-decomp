@@ -940,7 +940,7 @@
             "system/utl/GlitchFinder.cpp": "MISSING",
             "system/utl/HxGuid.cpp": "NonMatching",
             "system/utl/JobMgr.cpp": "NonMatching",
-            "system/utl/JsonEncode.cpp": "MISSING",
+            "system/utl/JsonEncode.cpp": "NonMatching",
             "system/utl/KnownIssues.cpp": "NonMatching",
             "system/utl/Licenses.cpp": "NonMatching",
             "system/utl/Loader.cpp": "MISSING",
