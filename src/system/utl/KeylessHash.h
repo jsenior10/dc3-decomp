@@ -3,7 +3,7 @@
 /**
  * @brief A keyless hash table.
  *
- * @tparam T1 const char* type (?)
+ * @tparam T1 the key type used to hash the value.
  * @tparam T2 the type to store into the hash table.
  */
 #include "math/Primes.h"
@@ -32,6 +32,22 @@ private:
      */
     T2 *FirstFrom(T2 *entry);
 
+    /** Advance the index to search the supplied hash table with.
+     * The hash table implementation is a circular buffer,
+     * so if the end is reached, loop back to index zero.
+     */
+    void Advance(int &idx) {
+        idx++;
+        if (idx == mSize)
+            idx = 0;
+    }
+
+    int Hash(const char *str, int size) { return HashString(str, size); }
+    int Hash(void *key, int size) { return HashKey(key, size); }
+    bool Cmp(const char *key, T2 &entry) const { return streq((const char *)entry, key); }
+    // for AllocInfo** value
+    bool Cmp(void *key, T2 &entry) { return entry->mMem == key; }
+
 public:
     // NEW_OVERLOAD;
     // DELETE_OVERLOAD;
@@ -43,7 +59,7 @@ public:
      * @param [in] key The key to search with.
      * @returns The corresponding entry, if it exists.
      */
-    T2 *Find(const char *const &key);
+    T2 *Find(const T1 &key);
 
     /** Insert this value into the hash table.
      * @param [in] val The val to insert.
@@ -61,16 +77,6 @@ public:
     // getters
     int Size() const { return mSize; }
     int UsedSize() const { return mNumEntries; }
-
-    /** Advance the index to search the supplied hash table with.
-     * The hash table implementation is a circular buffer,
-     * so if the end is reached, loop back to index zero.
-     */
-    void Advance(int &idx) {
-        idx++;
-        if (idx == mSize)
-            idx = 0;
-    }
 
     void Remove(T2 *);
     void Clear();
@@ -123,14 +129,14 @@ T2 *KeylessHash<T1, T2>::FirstFrom(T2 *entry) {
 }
 
 template <class T1, class T2>
-T2 *KeylessHash<T1, T2>::Find(const char *const &key) {
+T2 *KeylessHash<T1, T2>::Find(const T1 &key) {
     if (mEntries) {
-        int i = HashString(key, mSize);
+        int i = Hash(key, mSize);
         MILO_ASSERT(i >= 0, 0x86);
 
         for (; mEntries[i] != mEmpty; Advance(i)) {
             if (mEntries[i] != mRemoved) {
-                if (streq((const char *)mEntries[i], key))
+                if (Cmp(key, mEntries[i]))
                     return &mEntries[i];
             }
         }
@@ -145,11 +151,10 @@ T2 *KeylessHash<T1, T2>::Insert(const T2 &val) {
         MILO_ASSERT(mOwnEntries, 0x9C);
         Resize(0x19, 0);
     }
-    const char *valStr = (const char *)val;
-    int i = HashString(valStr, mSize);
+    auto valKey = (T1)val;
+    int i = Hash(valKey, mSize);
     MILO_ASSERT(i >= 0, 0xA2);
-    while (mEntries[i] != mEmpty && mEntries[i] != mRemoved
-           && !streq((const char *)mEntries[i], valStr)) {
+    while (mEntries[i] != mEmpty && mEntries[i] != mRemoved && Cmp(valKey, mEntries[i])) {
         Advance(i);
     }
     if (mEntries[i] == mEmpty) {
@@ -190,7 +195,7 @@ void KeylessHash<T1, T2>::Resize(int size, T2 *entries) {
     }
     mNumEntries = 0;
     for (T2 *it = Begin(); it != 0; it = Next(it)) {
-        int i = HashString(*it, size);
+        int i = Hash((T1)*it, size);
         MILO_ASSERT(i >= 0, 0xFB);
         while (entries[i] != mEmpty) {
             i++;

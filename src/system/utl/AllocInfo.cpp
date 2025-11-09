@@ -5,7 +5,7 @@
 #include "utl/TextStream.h"
 #include "xdk/XBDM.h"
 
-Trie *AllocInfo::s_pTrie;
+Trie *s_pTrie;
 bool AllocInfo::bPrintCsv;
 
 Pool &GetPool() {
