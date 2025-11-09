@@ -1,5 +1,6 @@
 #pragma once
 #include "utl/NetCacheMgr.h"
+#include "net/XLSPConnection.h"
 
 class NetCacheMgrXbox : public NetCacheMgr {
 public:
@@ -12,11 +13,11 @@ public:
 
 protected:
     virtual void LoadInit();
-    virtual bool IsDoneLoading() const;
+    virtual bool IsDoneLoading() const { return mDoneLoading; }
     virtual void UnloadInit();
     virtual bool IsDoneUnloading() const;
 
     bool mDoneLoading; // 0x68
     int unk6c;
-    // XLSPConnection at 0x70
+    XLSPConnection mConnection; // 0x70
 };
