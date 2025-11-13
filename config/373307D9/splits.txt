@@ -4407,13 +4407,14 @@ system/utl/MemMgr.cpp:
 	.text       start:0x82EDD3E0 end:0x82EDD3F0 rename:.text$yc
 	.text       start:0x82EE3348 end:0x82EE3358 rename:.text$yd
 	.data       start:0x82F189A0 end:0x82F189D8
-	.data       start:0x830E4B08 end:0x830E5718 rename:.bss
+	.data       start:0x830E4B08 end:0x830E5710 rename:.bss
 
 system/utl/Str.cpp:
 	.rdata      start:0x820D6258 end:0x820D6568
 	.rdata      start:0x822A039C end:0x822A03B0 rename:.rdata$r
 	.pdata      start:0x822EA670 end:0x822EA7D0
 	.text       start:0x827CD670 end:0x827CF038
+	.data       start:0x830E5710 end:0x830E5718 rename:.bss
 
 system/utl/FilePath.cpp:
 	.pdata      start:0x822EA7D0 end:0x822EA7D8

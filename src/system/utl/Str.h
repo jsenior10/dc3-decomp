@@ -21,7 +21,7 @@ class FixedString {
 protected:
     char *mStr; // 0x0
 public:
-    FixedString() {}
+    FixedString();
     FixedString(char *, int);
     ~FixedString() {
         if (capacity() != 0) {
