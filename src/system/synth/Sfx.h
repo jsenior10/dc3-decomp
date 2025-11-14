@@ -11,6 +11,8 @@
 #include "utl/PoolAlloc.h"
 
 class SfxMap {
+    friend bool PropSync(SfxMap &, DataNode &, DataArray *, int, PropOp);
+
 public:
     SfxMap(Hmx::Object *);
     void Save(BinStream &) const;
@@ -50,6 +52,11 @@ public:
     virtual void SetTranspose(float);
     virtual void StartImpl();
 
+    void Pause(bool);
+    void SetSend(FxSend *);
+    void SetReverbMixDb(float);
+    void SetReverbEnable(bool);
+
     POOL_OVERLOAD(SfxInst, 0x4E);
 
 private:
@@ -73,7 +80,7 @@ public:
     // Sequence
     virtual SeqInst *MakeInstImpl();
     // SynthPollable
-    virtual void SynthPoll();
+    virtual void SynthPoll() { Sequence::SynthPoll(); }
 
     void SetSend(FxSend *);
     void SetReverbMixDb(float);

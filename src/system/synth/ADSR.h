@@ -5,6 +5,7 @@
 
 class ADSRImpl {
     friend class ADSR;
+    friend bool PropSync(ADSRImpl &, DataNode &, DataArray *, int, PropOp);
 
 public:
     enum AttackMode {
@@ -62,6 +63,8 @@ public:
 
     OBJ_MEM_OVERLOAD(0x61);
     NEW_OBJ(ADSR)
+
+    ADSRImpl &Impl() { return mADSR; }
 
 protected:
     ADSR();

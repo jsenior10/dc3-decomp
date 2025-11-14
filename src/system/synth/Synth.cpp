@@ -33,6 +33,7 @@
 #include "synth/MicNull.h"
 #include "synth/Pollable.h"
 #include "synth/Sequence.h"
+#include "synth/Sfx.h"
 #include "synth/SynthSample.h"
 #include "synth/WavMgr.h"
 #include "utl/Cache.h"
@@ -134,9 +135,7 @@ END_HANDLERS
 void Synth::Init() {
     SynthUtlInit();
     REGISTER_OBJ_FACTORY(Fader);
-    //   SVar2 = Sfx::StaticClassName();
-    //                     /* WARNING: Load size is inaccurate */
-    //   Hmx::Object::RegisterFactory(*SVar2.mStr,Sfx::NewObject);
+    Sfx::Init();
     //   SVar2 = MidiInstrument::StaticClassName();
     //                     /* WARNING: Load size is inaccurate */
     //   Hmx::Object::RegisterFactory(*SVar2.mStr,MidiInstrument::NewObject);

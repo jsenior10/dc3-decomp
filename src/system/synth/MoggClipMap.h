@@ -4,6 +4,8 @@
 #include "utl/BinStream.h"
 
 class MoggClipMap {
+    friend bool PropSync(MoggClipMap &, DataNode &, DataArray *, int, PropOp);
+
 public:
     MoggClipMap(Hmx::Object *);
     MoggClipMap(const MoggClipMap &);

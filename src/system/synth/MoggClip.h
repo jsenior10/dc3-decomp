@@ -59,6 +59,7 @@ public:
     void SetFile(const char *);
     void SetPan(int, float);
     void AddFader(Fader *);
+    StandardStream *GetStream() const { return mStream; }
 
 private:
     void ApplyLoop(bool, int, int);
