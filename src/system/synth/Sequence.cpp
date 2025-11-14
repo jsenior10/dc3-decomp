@@ -499,6 +499,8 @@ SeqInst::SeqInst(Sequence *seq) : mOwner(seq), mVolume(0.0f), mStarted(false) {
     mRandTp = RandomVal(mOwner->AvgTranspose(), mOwner->TransposeSpread());
 }
 
+SeqInst::~SeqInst() {}
+
 void SeqInst::Start() {
     mStarted = true;
     StartImpl();

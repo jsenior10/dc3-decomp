@@ -218,7 +218,7 @@ public:
 class SeqInst : public Hmx::Object {
 public:
     SeqInst(Sequence *);
-    virtual ~SeqInst() {}
+    virtual ~SeqInst();
     virtual void Stop() = 0;
     virtual bool IsRunning() = 0;
     virtual void UpdateVolume() = 0;

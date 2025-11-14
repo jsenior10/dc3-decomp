@@ -10,6 +10,48 @@ ADSRImpl::ADSRImpl()
 float ADSRImpl::GetAttackRate() const { return mAttackRate; }
 float ADSRImpl::GetReleaseRate() const { return mReleaseRate; }
 
+void ADSRImpl::Save(BinStream &bs) const {
+    SAVE_REVS(1, 0)
+    bs << mAttackRate << mDecayRate << mSustainRate << mReleaseRate << mSustainLevel;
+    bs << mAttackMode << mSustainMode << mReleaseMode;
+}
+
+void ADSRImpl::Load(BinStream &bs, ADSR *adsr) {
+    LOAD_REVS(bs)
+    static const unsigned short gRevs[4] = { 1, 0, 0, 0 };
+    if (d.rev > 1) {
+        MILO_FAIL(
+            "%s can't load new %s version %d > %d",
+            adsr ? PathName(adsr) : "",
+            "ADSRImpl",
+            d.rev,
+            gRevs[0]
+        );
+    }
+    if (d.altRev > 0) {
+        MILO_FAIL(
+            "%s can't load new %s alt version %d > %d",
+            adsr ? PathName(adsr) : "",
+            "ADSRImpl",
+            d.altRev,
+            gRevs[2]
+        );
+    }
+    bs >> mAttackRate;
+    bs >> mDecayRate;
+    bs >> mSustainRate;
+    bs >> mReleaseRate;
+    bs >> mSustainLevel;
+    int mode;
+    bs >> mode;
+    mAttackMode = (AttackMode)mode;
+    bs >> mode;
+    mSustainMode = (SustainMode)mode;
+    bs >> mode;
+    mSynced = false;
+    mReleaseMode = (ReleaseMode)mode;
+}
+
 ADSR::ADSR() : mADSR() {}
 
 BEGIN_COPYS(ADSR)
@@ -21,12 +63,6 @@ BEGIN_COPYS(ADSR)
         }
     END_COPYING_MEMBERS
 END_COPYS
-
-void ADSRImpl::Save(BinStream &bs) const {
-    bs << 1;
-    bs << mAttackRate << mDecayRate << mSustainRate << mReleaseRate << mSustainLevel;
-    bs << mAttackMode << mSustainMode << mReleaseMode;
-}
 
 BinStream &operator<<(BinStream &bs, const ADSRImpl &adsr) {
     adsr.Save(bs);

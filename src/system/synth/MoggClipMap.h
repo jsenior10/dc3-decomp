@@ -12,6 +12,7 @@ public:
     void mySave(BinStream &) const;
     void myLoad(BinStreamRev &);
     MoggClipMap &operator=(const MoggClipMap &);
+    MoggClip *GetMoggClip() const { return mMoggClip; }
 
 protected:
     /** "Which moggclip to play" */

@@ -94,6 +94,7 @@ public:
     virtual float UpdateOverlay(RndOverlay *, float);
 
     Fader *MasterFader() const { return mMasterFader; }
+    Fader *SfxFader() const { return mSfxFader; }
     void SetDir(ObjectDir *dir) { unk64 = dir; }
     bool CheckCommonBank(bool);
     void SetMasterVolume(float);
