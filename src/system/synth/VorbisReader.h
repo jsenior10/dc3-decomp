@@ -18,17 +18,27 @@ public:
     virtual bool Done() { return mDone; }
     virtual bool Fail() { return mFail; }
 
+private:
+    bool TryReadHeader();
+    bool TryReadPacket(ogg_packet &);
+    void InitDecoder();
+    bool DoSeek();
+    bool DoFileRead();
+
 protected:
     virtual void Init();
     virtual int ConsumeData(void **, int, int);
     virtual void EndData() {}
+
+    void setupCypher(int);
+    void DoRawSeek(int);
 
     bool unk24;
     int unk28;
     int unk2c;
     File *mFile; // 0x30
     int mHeadersRead; // 0x34
-    int unk38;
+    char *mReadBuffer; // 0x38
     bool mEnableReads; // 0x3c
     int unk40;
     bool unk44;
@@ -41,11 +51,11 @@ protected:
     vorbis_comment *mVorbisComment; // 0x5c
     vorbis_dsp_state *mVorbisDsp; // 0x60
     vorbis_block *mVorbisBlock; // 0x64
-    int unk68;
-    int unk6c;
-    int unk70;
-    int unk74;
-    int unk78;
+    long mMagicA; // 0x68 - byte grinder seed A
+    long mMagicB; // 0x6c - byte grinder seed B
+    long mKeyIndex; // 0x70
+    long mMagicHashA; // 0x74
+    long mMagicHashB; // 0x78
     int unk7c;
     ogg_packet mPendingPacket; // 0x80
     bool unka0;
