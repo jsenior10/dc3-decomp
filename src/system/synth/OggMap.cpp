@@ -5,11 +5,15 @@
 int OggMap::GetSongLengthSamples() { return mGran * mLookup.size(); }
 
 void OggMap::GetSeekPos(int sampTarget, int &seekPos, int &actSamp) {
-    int i14 = sampTarget / mGran;
-    int i18 = mLookup.size() - 1;
-    ClampEq(i14, 0, i18);
-    seekPos = mLookup[i14].first;
-    actSamp = mLookup[i14].second;
+    if (mLookup.empty()) {
+        seekPos = actSamp = 0;
+    } else {
+        int i14 = sampTarget / mGran;
+        int maxLookupIdx = mLookup.size() - 1;
+        int idx = Clamp(0, maxLookupIdx, i14);
+        seekPos = mLookup[idx].first;
+        actSamp = mLookup[idx].second;
+    }
 }
 
 OggMap::~OggMap() { mLookup.clear(); }

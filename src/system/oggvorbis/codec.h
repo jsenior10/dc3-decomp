@@ -27,8 +27,9 @@ extern "C" {
 
 /* inline compiler intrinsics go here */
 
-// hack for now, msvc probably did something different here
-void *alloca(size_t size) { return (void *)__alloca(size); }
+// this is an msvc compiler intrinsic but idk how to invoke it
+// i've declared the intrinsic in stdlib.h but it's not working
+void *alloca(size_t size) { return (void *)_alloca(size); }
 
 typedef struct vorbis_info {
     int version;

@@ -96,6 +96,7 @@ public:
     bool IsPastStreamJumpPointOfNoReturn();
     void InitInfo(int, int, bool, int);
     float GetBufferAheadTime() const;
+    int ConsumeData(void **, int, int);
 
     static const float kStreamEndMs;
 

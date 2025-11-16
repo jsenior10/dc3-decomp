@@ -11,6 +11,9 @@ void *calloc(size_t nitems, size_t size);
 void *realloc(void *ptr, size_t size);
 void free(void *);
 
+#pragma intrinsic(_alloca)
+void *_alloca(size_t size);
+
 typedef struct {
     int quot;
     int rem;
@@ -69,11 +72,7 @@ float strtof(const char *str, char **str_end);
 double strtod(const char *str, char **str_end);
 long double strtold(const char *str, char **str_end);
 
-unsigned long long _strtoui64(
-   const char *strSource,
-   char **endptr,
-   int base
-);
+unsigned long long _strtoui64(const char *strSource, char **endptr, int base);
 
 unsigned long __strtoul(
     int base,

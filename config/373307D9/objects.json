@@ -798,7 +798,7 @@
             "system/synth/SynthSample.cpp": "NonMatching",
             "system/synth/ThreeDSound.cpp": "NonMatching",
             "system/synth/Utl.cpp": "MISSING",
-            "system/synth/VorbisReader.cpp": "MISSING",
+            "system/synth/VorbisReader.cpp": "NonMatching",
             "system/synth/WahEffect.cpp": "MISSING",
             "system/synth/WavMgr.cpp": "NonMatching",
             "system/synth/WavReader.cpp": "MISSING",
