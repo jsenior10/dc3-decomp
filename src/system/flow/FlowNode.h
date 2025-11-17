@@ -5,6 +5,7 @@
 
 class Flow;
 class DrivenPropertyEntry;
+class FlowLabel;
 
 /** "A flow node" */
 class FlowNode : public virtual Hmx::Object {
@@ -62,7 +63,7 @@ public:
     virtual void RequestStop();
     virtual void RequestStopCancel();
     virtual void Execute(QueueState) {}
-    virtual bool IsRunning();
+    virtual bool IsRunning() { return !mRunningNodes.empty(); }
     virtual Flow *GetOwnerFlow();
     virtual void MiloPreRun();
     virtual void MoveIntoDir(ObjectDir *, ObjectDir *);
@@ -87,10 +88,11 @@ protected:
 
     void ActivateChild(FlowNode *);
     void PushDrivenProperties(void);
+    void ActivateLabel(FlowLabel *);
 
     bool mDebugOutput; // 0x8
     String mDebugComment; // 0xc
-    ObjPtrVec<FlowNode> mVec1; // 0x14
+    ObjPtrVec<FlowNode> mChildNodes; // 0x14
     ObjPtrList<FlowNode> mRunningNodes; // 0x30
     FlowNode *mFlowParent; // 0x44
     ObjVector<DrivenPropertyEntry> mDrivenPropEntries; // 0x48

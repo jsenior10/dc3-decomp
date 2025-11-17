@@ -233,6 +233,7 @@ bool PropSync(Keys<T, T> &keys, DataNode &node, DataArray *prop, int i, PropOp o
     }
 }
 
+// this is called and inlined in the ObjPtrVec propsync
 template <class T>
 bool PropSync(T *&obj, DataNode &node, DataArray *prop, int i, PropOp op) {
     if (op == kPropUnknown0x40)

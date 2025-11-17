@@ -14,6 +14,7 @@ public:
     void Load(BinStream &, FlowNode *);
 
     bool Empty() { return mMathOps.empty(); }
+    const DataNode &Node() const { return unk0; }
 
 protected:
     DataNode unk0; // 0x0

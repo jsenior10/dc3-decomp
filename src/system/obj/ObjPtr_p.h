@@ -209,7 +209,8 @@ void ObjPtrVec<T1, T2>::operator=(const ObjPtrVec &other) {
 
 template <class T1, class T2>
 void ObjPtrVec<T1, T2>::push_back(T1 *obj) {
-    insert(mNodes.empty() ? mNodes.begin() : mNodes.end(), obj);
+    const_iterator it = end();
+    insert(it, obj);
 }
 
 template <class T1, class T2>

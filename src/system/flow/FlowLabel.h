@@ -24,6 +24,7 @@ public:
     NEW_OBJ(FlowLabel)
 
     bool Activate(FlowNode *);
+    Symbol Label() const { return mLabel; }
 
 protected:
     FlowLabel();

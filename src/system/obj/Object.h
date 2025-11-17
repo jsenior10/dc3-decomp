@@ -249,6 +249,8 @@ protected:
 public:
     // this derives off of std::vector<Node>::iterator in some way
     class iterator {
+        friend class const_iterator;
+
     private:
         typedef typename std::vector<Node>::iterator Base;
         Base it;
@@ -274,6 +276,7 @@ public:
 
     public:
         const_iterator(Base base) : it(base) {}
+        const_iterator(iterator non_const) : it(non_const.it) {}
 
         const Node &operator*() const { return *it; }
         const Node *operator->() const { return &(*it); }
@@ -291,10 +294,22 @@ public:
     virtual ~ObjPtrVec();
 
     // i now have the suspicion these might be wrong but idk how to fix it yet
-    iterator begin() { return iterator(mNodes.begin()); }
-    iterator end() { return iterator(mNodes.end()); }
-    const_iterator begin() const { return const_iterator(mNodes.begin()); }
-    const_iterator end() const { return const_iterator(mNodes.end()); }
+    iterator begin() {
+        Node *n = empty() ? nullptr : &mNodes[0];
+        return n;
+    }
+    iterator end() {
+        Node *n = empty() ? nullptr : &mNodes[size()];
+        return n;
+    }
+    const_iterator begin() const {
+        const Node *n = empty() ? nullptr : &mNodes[0];
+        return n;
+    }
+    const_iterator end() const {
+        const Node *n = empty() ? nullptr : &mNodes[size()];
+        return n;
+    }
 
     iterator erase(iterator);
     iterator insert(const_iterator, T1 *);
