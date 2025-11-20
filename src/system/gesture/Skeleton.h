@@ -116,6 +116,7 @@ struct SkeletonData {
 };
 
 struct SkeletonUpdateData {
+    // 0x0: Skeleton*(?)
     // 0x4: Skeleton*(&)[6](?)
     // 0x8: SkeletonFrame*
     // 0xc: SkeletonHistory*

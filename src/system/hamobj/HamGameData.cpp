@@ -343,16 +343,18 @@ DataNode OnGetCharacterOutfit(DataArray *a) {
 DataNode GetPlayableOutfits(DataArray *a) {
     static Symbol outfits("outfits");
     static Symbol playable("playable");
-    bool i2 = a->Int(1);
+    bool dataPlayable = a->Int(1);
     DataArrayPtr ptr(new DataArray(0));
     DataArray *pCharacterArray = GetCharacters();
     MILO_ASSERT(pCharacterArray, 0x1A9);
+    // for each defined character
     for (int i = 0; i < pCharacterArray->Size(); i++) {
         DataArray *pCharacterData = pCharacterArray->Array(i);
         MILO_ASSERT(pCharacterData, 0x1AE);
         bool isPlayable = true;
         pCharacterData->FindData(playable, isPlayable, false);
-        if (isPlayable == i2) {
+        if (isPlayable == dataPlayable) {
+            // add each outfit symbol to the DataArrayPtr
             DataArray *pOutfitArray = pCharacterData->FindArray(outfits, false);
             if (pOutfitArray) {
                 for (int j = 1; j < pOutfitArray->Size(); j++) {
@@ -387,34 +389,34 @@ Symbol HamGameData::Venue() const {
 }
 
 const DataNode *HamGameData::PlayerProp(int index, Symbol s2) const {
-    MILO_ASSERT((0) <= (index) && (index) < (2), 0x224);
+    MILO_ASSERT_RANGE(index, 0, 2, 0x224);
     return mPlayers[index]->Property(s2, true);
 }
 
 void HamGameData::SetPlayerProp(int index, Symbol s2, const DataNode &n) {
-    MILO_ASSERT((0) <= (index) && (index) < (2), 0x22A);
+    MILO_ASSERT_RANGE(index, 0, 2, 0x22A);
     mPlayers[index]->SetProperty(s2, n);
 }
 
 HamPlayerData *HamGameData::Player(int index) const {
-    MILO_ASSERT((0) <= (index) && (index) < (2), 0x230);
+    MILO_ASSERT_RANGE(index, 0, 2, 0x230);
     return mPlayers[index];
 }
 
 String HamGameData::GetPlayerName(int player) {
-    MILO_ASSERT((0) <= (player) && (player) < (2), 0x2B7);
+    MILO_ASSERT_RANGE(player, 0, 2, 0x2B7);
     HamPlayerData *pPlayer = mPlayers[player];
     MILO_ASSERT(pPlayer, 0x2BA);
     return pPlayer->GetPlayerName();
 }
 
 void HamGameData::AssignSkeleton(int player, int id) {
-    MILO_ASSERT((0) <= (player) && (player) < (2), 0x247);
+    MILO_ASSERT_RANGE(player, 0, 2, 0x247);
     if (id != -1) {
         for (int i = 0; i < kMaxPlayers; i++) {
-            if (i != player && id == mPlayers[i]->mSkeletonTrackingID) {
+            if (i != player && id == mPlayers[i]->GetSkeletonTrackingID()) {
                 MILO_NOTIFY(
-                    "AssignSkeleton called for player %i with tracking_id %i, butplayer % i is already using it",
+                    "AssignSkeleton called for player %i with tracking_id %i, butplayer %i is already using it",
                     player,
                     id,
                     i
@@ -422,12 +424,12 @@ void HamGameData::AssignSkeleton(int player, int id) {
             }
         }
     }
-    mPlayers[player]->SetSkeletonTrackingID(id);
+    mPlayers[player]->AssignSkeleton(id);
 }
 
 void HamGameData::UnassignSkeletons() {
-    mPlayers[0]->SetSkeletonTrackingID(-1);
-    mPlayers[1]->SetSkeletonTrackingID(-1);
+    mPlayers[0]->AssignSkeleton(-1);
+    mPlayers[1]->AssignSkeleton(-1);
 }
 
 void HamGameData::SwapPlayerSidesByIDOnly() {
@@ -435,37 +437,38 @@ void HamGameData::SwapPlayerSidesByIDOnly() {
     MILO_ASSERT(pPlayer0, 0x27D);
     HamPlayerData *pPlayer1 = mPlayers[1];
     MILO_ASSERT(pPlayer1, 0x27F);
-    int id0 = pPlayer0->mSkeletonTrackingID;
-    pPlayer0->SetSkeletonTrackingID(pPlayer1->mSkeletonTrackingID);
-    pPlayer1->SetSkeletonTrackingID(id0);
+    int id0 = pPlayer0->GetSkeletonTrackingID();
+    pPlayer0->AssignSkeleton(pPlayer1->GetSkeletonTrackingID());
+    pPlayer1->AssignSkeleton(id0);
 }
 
 bool HamGameData::SidesSwapped() {
     static Symbol side("side");
-    int side0 = mPlayers[0]->mProvider->Property(side, true)->Int();
+    int side0 = mPlayers[0]->Provider()->Property(side, true)->Int();
     return side0 != 1;
 }
 
 bool HamGameData::IsSkeletonPresent(int index) const {
-    return TheGestureMgr->InControllerMode() || Player(index)->mSkeletonTrackingID > 0;
+    return TheGestureMgr->InControllerMode()
+        || Player(index)->GetSkeletonTrackingID() > 0;
 }
 
 int HamGameData::GetPlayerFromSkeleton(const Skeleton &skeleton) const {
     for (int i = 0; i < kMaxPlayers; i++) {
         HamPlayerData *player = TheGameData->Player(i);
-        if (player->mSkeletonTrackingID == skeleton.TrackingID())
+        if (player->GetSkeletonTrackingID() == skeleton.TrackingID())
             return i;
     }
     return -1;
 }
 
 bool HamGameData::SetAssociatedPadNum(int player, int padnum) {
-    MILO_ASSERT((0) <= (player) && (player) < (2), 0x2CD);
+    MILO_ASSERT_RANGE(player, 0, 2, 0x2CD);
     HamPlayerData *pPlayer = mPlayers[player];
     MILO_ASSERT(pPlayer, 0x2D0);
     if (padnum >= 0 && ThePlatformMgr.IsSignedIn(padnum)) {
         HamPlayerData *playerData = mPlayers[player];
-        if (playerData->mPadNum == padnum) {
+        if (playerData->PadNum() == padnum) {
             playerData->SetAssociatedPadNum(-1, gNullStr);
         }
         return playerData->SetAssociatedPadNum(padnum, ThePlatformMgr.GetName(padnum));
@@ -476,14 +479,14 @@ bool HamGameData::SetAssociatedPadNum(int player, int padnum) {
 
 void HamGameData::SwapPlayerSides() {
     static Symbol side("side");
-    int side0 = mPlayers[0]->mProvider->Property(side, true)->Int();
-    int side1 = mPlayers[1]->mProvider->Property(side, true)->Int();
-    mPlayers[0]->mProvider->SetProperty(side, side1);
-    mPlayers[1]->mProvider->SetProperty(side, side0);
+    int side0 = mPlayers[0]->Provider()->Property(side, true)->Int();
+    int side1 = mPlayers[1]->Provider()->Property(side, true)->Int();
+    mPlayers[0]->Provider()->SetProperty(side, side1);
+    mPlayers[1]->Provider()->SetProperty(side, side0);
     for (int i = 0; i < kMaxPlayers; i++) {
         if (0.5f < Player(i)->TrackingAgeSeconds()) {
             static Message side_moved("side_moved");
-            Player(i)->mProvider->Export(side_moved, true);
+            Player(i)->Provider()->Export(side_moved, true);
         }
     }
 }
@@ -498,6 +501,6 @@ void HamGameData::UpdateAssociatedPads() {
     for (int i = 0; i < kMaxPlayers; i++) {
         HamPlayerData *pPlayer = mPlayers[i];
         MILO_ASSERT(pPlayer, 0x2C4);
-        SetAssociatedPadNum(i, pPlayer->mPadNum);
+        SetAssociatedPadNum(i, pPlayer->PadNum());
     }
 }

@@ -7,8 +7,6 @@
 #include "utl/Str.h"
 
 class HamPlayerData : public Hmx::Object {
-    friend class HamGameData;
-
 public:
     HamPlayerData(int);
     // Hmx::Object
@@ -36,6 +34,9 @@ public:
     PropertyEventProvider *Provider() const { return mProvider; }
     bool InFreestyle() const { return mSkeletonTrackingID >= 0; }
     Symbol Crew() const { return mCrew; }
+    int GetSkeletonTrackingID() const { return mSkeletonTrackingID; }
+    void AssignSkeleton(int id) { SetSkeletonTrackingID(id); }
+    int PadNum() const { return mPadNum; }
 
 private:
     void SetSkeletonTrackingID(int);
