@@ -94,6 +94,7 @@ public:
     MoveMirrored Mirrored() const;
     void Update(const HamMove *);
     const FilterVersion *FilterVer() const;
+    const std::vector<float> *RatingOverride() const;
 
     bool Scored() const { return mScored; }
     DancerSequence *GetDancerSequence() const { return mDancerSeq; }

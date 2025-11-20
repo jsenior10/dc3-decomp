@@ -3,6 +3,7 @@
 #include "MoveDir.h"
 #include "ScoreUtl.h"
 #include "char/Character.h"
+#include "flow/PropertyEventProvider.h"
 #include "gesture/GestureMgr.h"
 #include "gesture/SkeletonClip.h"
 #include "gesture/SkeletonDir.h"
@@ -10,6 +11,7 @@
 #include "gesture/SkeletonViz.h"
 #include "hamobj/CharFeedback.h"
 #include "hamobj/DancerSequence.h"
+#include "hamobj/DetectFrame.h"
 #include "hamobj/Difficulty.h"
 #include "hamobj/FilterVersion.h"
 #include "hamobj/HamDirector.h"
@@ -17,6 +19,7 @@
 #include "hamobj/HamMove.h"
 #include "hamobj/HamPlayerData.h"
 #include "hamobj/MoveDetector.h"
+#include "hamobj/ScoreUtl.h"
 #include "meta/SongMetadata.h"
 #include "meta/SongMgr.h"
 #include "obj/Data.h"
@@ -432,6 +435,57 @@ void MoveDir::PostLoad(BinStream &bs) {
         }
     } else {
         mRecordClip = nullptr;
+    }
+}
+
+void MoveDir::Poll() {
+    SkeletonDir::Poll();
+    mSkeletonViz->Poll();
+    if (TheHamDirector) {
+        int curMeasure = TheTaskMgr.CurrentMeasure();
+        for (int i = 0; i < 2; i++) {
+            HamMove *oldMove = mCurMove[i];
+            mCurMove[i] = nullptr;
+            filler[i] = oldMove;
+            MovePlayerData &curPlayerData = mMovePlayerData[i];
+            if (curMeasure >= 0 && curMeasure < curPlayerData.unk20.size()) {
+                mCurMove[i] = curPlayerData.unk20[curMeasure].move;
+            }
+            MoveRating oldRating = mCurMoveRating[i];
+            mCurMoveRating[i] = kMoveRatingOk;
+            unk3f0[i] = oldRating;
+            float oldRes = mCurMoveNormalizedResult[i];
+            mCurMoveNormalizedResult[i] = 0;
+            unk3e8[i] = oldRes;
+
+            if (mCurMove[i]) {
+                std::pair<DetectFrame *, DetectFrame *> frames;
+                DetectRange(curPlayerData.unk14, frames, curMeasure, curMeasure);
+                float frac = DetectFrac(i, mCurMove[i], frames);
+                mCurMoveRating[i] =
+                    DetectFracToMoveRating(frac, mCurMove[i]->RatingOverride());
+                mCurMoveNormalizedResult[i] =
+                    DetectFracToRatingFrac(frac, mCurMove[i]->RatingOverride());
+            }
+            mCurMoveSmoothers[i].Smooth(
+                mCurMoveNormalizedResult[i],
+                TheMaster && TheMaster->Unk70() == 3 ? TheTaskMgr.DeltaUISeconds() * 4.0f
+                                                     : TheTaskMgr.DeltaUISeconds()
+            );
+            if (mCurMoveRating[i] <= kMoveRatingPerfect && unk3f0[i] > 1) {
+                static Symbol passed_move_p1("passed_move_p1");
+                static Symbol passed_move_p2("passed_move_p2");
+                TheHamProvider->Export(
+                    Message(i == 0 ? passed_move_p1 : passed_move_p2, mCurMove[i]->Name()),
+                    true
+                );
+            }
+        }
+        if ((mCurMoveRating[0] <= 1 || mCurMoveRating[1] <= 1) && unk3f0[0] > 1
+            && unk3f0[1] > 1) {
+            static Message msg_passed_move("passed_move");
+            TheHamProvider->Export(msg_passed_move, true);
+        }
     }
 }
 

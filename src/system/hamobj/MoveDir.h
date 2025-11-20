@@ -7,6 +7,7 @@
 #include "gesture/SkeletonViz.h"
 #include "hamobj/CharFeedback.h"
 #include "hamobj/DancerSequence.h"
+#include "hamobj/DetectFrame.h"
 #include "hamobj/Difficulty.h"
 #include "hamobj/FilterVersion.h"
 #include "hamobj/HamMove.h"
@@ -106,6 +107,9 @@ private:
     void SetFilterVersion(Symbol);
     SkeletonClip *ImportClip(bool);
     void ReloadScoring();
+    void DetectRange(
+        std::vector<DetectFrame> &, std::pair<DetectFrame *, DetectFrame *> &, int, int
+    );
 
     DataNode OnStreamJump(const DataArray *);
 
@@ -147,11 +151,15 @@ protected:
     std::list<ObjDirPtr<UILabelDir> > unk398; // 0x398 - update fonts?
     /** Smoothed normalized results of the current move. */
     DoubleExponentialSmoother mCurMoveSmoothers[2]; // 0x3a0
-    int filler; // 0x3c8
-    int filler2; // 0x3cc
+
+    // current move stuffs vs last move stuffs?
+    HamMove *filler[2]; // 0x3c8
     HamMove *mCurMove[2]; // 0x3d0
     float mCurMoveNormalizedResult[2]; // 0x3d8
-    char buffer[0x18]; // 0x3e0
+    float unk3e8[2]; // 0x3e8
+    MoveRating mCurMoveRating[2]; // 0x3e0
+    int unk3f0[2]; // 0x3f0
+
     int mFinishingMoveMeasure; // 0x3f8
     RndOverlay *mMoveOverlay; // 0x3fc
     ObjPtr<DancerSequence> mDancerSeq; // 0x400

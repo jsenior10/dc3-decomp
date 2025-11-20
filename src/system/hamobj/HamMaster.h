@@ -50,6 +50,7 @@ public:
     void AddMusicFader(Fader *);
     void SetMaps();
     void LoaderPoll();
+    int Unk70() const { return unk60.GetMeasure(); }
 
 private:
     HamSongData *mSongData; // 0x30
