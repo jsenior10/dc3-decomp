@@ -40,6 +40,8 @@ public:
     OBJ_MEM_OVERLOAD(0x1C)
     NEW_OBJ(HamSkeletonConverter)
 
+    void Set(const BaseSkeleton *);
+
 protected:
     HamSkeletonConverter();
 

@@ -38,6 +38,7 @@ public:
     void SetPositionContext(int c) { mPositionContext = c; }
     void SetRotationContext(int c) { mRotationContext = c; }
     void SetRotationType(CharBones::Type ty) { mRotation = ty; }
+    bool BakeOutAsTopLevel() const { return mBakeOutAsTopLevel; }
     void ClearContext(int);
     void StuffBones(std::list<CharBones::Bone> &, int) const;
 

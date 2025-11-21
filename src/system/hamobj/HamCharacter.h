@@ -101,6 +101,7 @@ public:
     void BlendInFaceOverrideClip(Symbol, float, float);
     Waypoint *GetWaypoint() const { return mWaypoint; }
     bool UseCameraSkeleton() const { return mUseCameraSkeleton; }
+    void SetPollWhenHidden(bool poll) { mPollWhenHidden = poll; }
 
 protected:
     virtual void AddedObject(Hmx::Object *);

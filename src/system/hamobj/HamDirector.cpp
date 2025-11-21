@@ -4,26 +4,42 @@
 #include "PoseFatalities.h"
 #include "SongCollision.h"
 #include "SongUtl.h"
+#include "char/CharBone.h"
+#include "char/CharBoneDir.h"
+#include "char/CharBonesMeshes.h"
+#include "char/CharClip.h"
+#include "char/CharForeTwist.h"
 #include "char/CharLipSync.h"
+#include "char/CharNeckTwist.h"
+#include "char/CharPollable.h"
+#include "char/CharUpperTwist.h"
+#include "char/CharUtl.h"
 #include "char/Character.h"
 #include "char/FileMerger.h"
 #include "flow/Flow.h"
 #include "flow/PropertyEventProvider.h"
+#include "gesture/BaseSkeleton.h"
 #include "hamobj/ClipPlayer.h"
 #include "hamobj/Difficulty.h"
 #include "hamobj/HamCamShot.h"
 #include "hamobj/HamCharacter.h"
 #include "hamobj/HamGameData.h"
+#include "hamobj/HamMaster.h"
 #include "hamobj/HamMove.h"
 #include "hamobj/HamPhraseMeter.h"
 #include "hamobj/HamPlayerData.h"
+#include "hamobj/HamRibbon.h"
+#include "hamobj/HamSkeletonConverter.h"
 #include "hamobj/HamVisDir.h"
 #include "hamobj/HamWardrobe.h"
 #include "hamobj/TransConstraint.h"
 #include "math/Mtx.h"
 #include "math/Rand.h"
+#include "math/Rot.h"
 #include "math/Utl.h"
+#include "math/Vec.h"
 #include "obj/Data.h"
+#include "obj/DataFile.h"
 #include "obj/Dir.h"
 #include "obj/Msg.h"
 #include "obj/Object.h"
@@ -38,6 +54,7 @@
 #include "rndobj/PostProc.h"
 #include "rndobj/PropAnim.h"
 #include "rndobj/PropKeys.h"
+#include "rndobj/Tex.h"
 #include "rndobj/TexRenderer.h"
 #include "rndobj/Trans.h"
 #include "utl/FakeSongMgr.h"
@@ -46,6 +63,7 @@
 #include "utl/Str.h"
 #include "utl/Symbol.h"
 #include "utl/TextStream.h"
+#include "utl/TimeConversion.h"
 #include "world/CameraManager.h"
 #include "world/Dir.h"
 #include <cctype>
@@ -1720,4 +1738,393 @@ bool HamDirector::InPracticeMode() {
     Key<Symbol> *start;
     Key<Symbol> *end;
     return GetPracticeFrames(start, end);
+}
+
+void HamDirector::PoseIconMan(
+    CharClip *clip1, float f2, RndTex *tex, bool b4, CharClip *clip2, float f5, float f6
+) {
+    if (clip1) {
+        CharBonesMeshes meshes;
+        meshes.SetName("preview_anim", mIconManChar);
+        clip1->StuffBones(meshes);
+        meshes.Zero();
+        if (clip2) {
+            clip1->ScaleAdd(meshes, 1 - f6, f2, 0);
+            clip2->ScaleAdd(meshes, f6, f5, 0);
+        } else {
+            clip1->ScaleAdd(meshes, 1, f2, 0);
+        }
+        meshes.PoseMeshes();
+        if (b4) {
+            RndTransformable *pelvis = CharUtlFindBoneTrans("bone_pelvis", meshes.Dir());
+            void *rotzPtr = meshes.FindPtr("bone_facing.rotz");
+            void *posPtr = meshes.FindPtr("bone_facing.pos");
+            if (pelvis && posPtr && rotzPtr) {
+                float *rot = (float *)rotzPtr;
+                Vector3 *pos = (Vector3 *)posPtr;
+                Transform &pelvisXfm = pelvis->DirtyLocalXfm();
+                RotateAboutZ(pelvisXfm.m, *rot, pelvisXfm.m);
+                RotateAboutZ(pelvisXfm.v, *rot, pelvisXfm.v);
+                Normalize(pelvisXfm.m, pelvisXfm.m);
+                pelvisXfm.v += *pos;
+            }
+            CharBoneDir *resourceDir = clip1->GetResource();
+            for (ObjDirItr<CharBone> it(resourceDir, false); it != nullptr; ++it) {
+                if (it->BakeOutAsTopLevel()) {
+                    String name(it->Name());
+                    if (name.find(".cb") != FixedString::npos) {
+                        name = name.substr(0, name.length() - 3);
+                    }
+                    RndTransformable *curTrans =
+                        CharUtlFindBoneTrans(name.c_str(), meshes.Dir());
+                    if (curTrans && posPtr && rotzPtr) {
+                        float *rot = (float *)rotzPtr;
+                        Vector3 *pos = (Vector3 *)posPtr;
+                        Transform &curXfm = curTrans->DirtyLocalXfm();
+                        RotateAboutZ(curXfm.m, *rot, curXfm.m);
+                        RotateAboutZ(curXfm.v, *rot, curXfm.v);
+                        Normalize(curXfm.m, curXfm.m);
+                        curXfm.v += *pos;
+                    }
+                }
+            }
+        }
+        for (ObjDirItr<CharPollable> it(mIconManChar, true); it != nullptr; ++it) {
+            if (dynamic_cast<CharForeTwist *>(&*it)
+                || dynamic_cast<CharUpperTwist *>(&*it)
+                || dynamic_cast<CharNeckTwist *>(&*it)) {
+                it->Poll();
+            }
+        }
+    }
+    mIconManTex->SetShowing(true);
+    mIconManTex->SetOutputTexture(tex);
+    mIconManTex->DrawShowing();
+    mIconManTex->SetShowing(false);
+}
+
+void HamDirector::PoseIconMan(const BaseSkeleton *skeleton, RndTex *tex) {
+    HamCharacter *iconMan = dynamic_cast<HamCharacter *>(mIconManChar.Ptr());
+    MILO_ASSERT(iconMan, 0x52D);
+    for (ObjDirItr<HamRibbon> it(iconMan, true); it != nullptr; ++it) {
+        it->Reset();
+    }
+    iconMan->SetUseCameraSkeleton(true);
+    HamSkeletonConverter *skelCvt =
+        iconMan->Find<HamSkeletonConverter>("HamSkeletonConverter.cvt", true);
+    MILO_ASSERT(skelCvt, 0x535);
+    skelCvt->Set(skeleton);
+    iconMan->SetPollWhenHidden(true);
+    iconMan->Poll();
+    iconMan->SetPollWhenHidden(false);
+    mIconManTex->SetShowing(true);
+    mIconManTex->SetOutputTexture(tex);
+    mIconManTex->DrawShowing();
+    mIconManTex->SetShowing(false);
+    iconMan->SetUseCameraSkeleton(false);
+}
+
+DataNode HamDirector::OnGetDancerVisemes(DataArray *a) {
+    std::list<Symbol> visemes;
+    HamCharacter *hc = GetCharacter(0);
+    if (hc) {
+        ObjectDir *visemeDir = hc->Find<ObjectDir>("viseme", false);
+        if (visemeDir) {
+            for (ObjDirItr<CharClip> it(visemeDir, false); it != nullptr; ++it) {
+                visemes.push_back(it->Name());
+            }
+        }
+    }
+    DataArray *visemeArr = new DataArray(visemes.size() + 1);
+    visemeArr->Node(0) = Symbol();
+    int idx = 1;
+    FOREACH (it, visemes) {
+        visemeArr->Node(idx) = *it;
+        ++idx;
+    }
+    DataNode ret(visemeArr);
+    visemeArr->Release();
+    return ret;
+}
+
+void HamDirector::CleanOriginalMoveData() {
+    for (ObjDirItr<CharClip> it(mClipDir, true); it != nullptr; ++it) {
+        MILO_LOG("[HamDirector::CleanOriginalMoveData] Removing %s ...\n", it->Name());
+        delete it;
+    }
+    for (ObjDirItr<HamMove> it(mMoveDir, true); it != nullptr; ++it) {
+        RndTex *smallTex = it->SmallTex();
+        RndTex *regTex = it->Tex();
+        if (smallTex && smallTex != regTex) {
+            MILO_LOG(
+                "[HamDirector::CleanOriginalMoveData] Removing %s ...\n", smallTex->Name()
+            );
+            delete smallTex;
+        }
+        if (regTex) {
+            MILO_LOG(
+                "[HamDirector::CleanOriginalMoveData] Removing %s ...\n", regTex->Name()
+            );
+            delete regTex;
+        }
+        MILO_LOG("[HamDirector::CleanOriginalMoveData] Removing %s ...\n", it->Name());
+        delete it;
+    }
+}
+
+void HamDirector::LoadRoutineBuilderData(
+    std::set<const MoveVariant *> &moveVariants, bool b2
+) {
+    if (moveVariants.empty()) {
+        FOREACH (it, unk370) {
+            delete *it;
+        }
+        unk370.clear();
+    } else {
+        ObjectDir *moveMgrDir = TheMoveMgr->MoveDataDir();
+        if (!moveMgrDir) {
+            MILO_NOTIFY("Move data missing from %s", TheGameData->GetSong());
+        } else {
+            ObjectDir *movesDir = GetWorld()->Find<ObjectDir>("moves", true);
+            int movesDirHash = movesDir->HashTableSize() + moveMgrDir->HashTableSize();
+            int movesDirStr = movesDir->StrTableSize() + moveMgrDir->StrTableSize();
+            movesDir->Reserve(movesDirHash, movesDirStr);
+            std::vector<Hmx::Object *> objects;
+            objects.reserve(0x80);
+            for (ObjDirItr<HamMove> it(moveMgrDir, false); it != nullptr; ++it) {
+                objects.push_back(it);
+            }
+            FOREACH (it, objects) {
+                Hmx::Object *cur = *it;
+                const char *name = cur->Name();
+                Hmx::Object *find = movesDir->FindObject(name, false, false);
+                if (!find) {
+                    cur->SetName(name, movesDir);
+                    unk370.insert(cur);
+                }
+            }
+            objects.clear();
+            ObjectDir *clipsDir = GetWorld()->Find<ObjectDir>("clips", true);
+            int clipsDirHash = clipsDir->HashTableSize() + moveMgrDir->HashTableSize();
+            int clipsDirStr = clipsDir->StrTableSize() + moveMgrDir->StrTableSize();
+            clipsDir->Reserve(clipsDirHash, clipsDirStr);
+            for (ObjDirItr<CharClip> it(clipsDir, false); it != nullptr; ++it) {
+                objects.push_back(it);
+            }
+            FOREACH (it, objects) {
+                Hmx::Object *cur = *it;
+                const char *name = cur->Name();
+                Hmx::Object *find = clipsDir->FindObject(name, false, false);
+                if (!find) {
+                    cur->SetName(name, clipsDir);
+                    unk370.insert(cur);
+                }
+            }
+        }
+    }
+}
+
+void HamDirector::OnPopulateMoveMgr() {
+    TheMoveMgr->LoadSongData();
+    TheMoveMgr->InitSong();
+    TheMoveMgr->AutoFillParents();
+    TheMoveMgr->FillRoutineFromParents(-1);
+    TheMoveMgr->ComputeLoadedMoveSet();
+    // LoadRoutineBuilderData()
+    OnPopulateFromMoveMgr();
+    DataArrayPtr variants;
+    TheMoveMgr->SaveRoutineVariants(variants);
+    DataWriteFile("routine_test_variants.dta", variants, 0);
+    DataArrayPtr parents;
+    TheMoveMgr->SaveRoutine(parents);
+    DataWriteFile("routine_test_parents.dta", parents, 0);
+}
+
+void HamDirector::OnPopulateFromFile() {
+    TheMoveMgr->LoadSongData();
+    TheMoveMgr->InitSong();
+    DataArray *variants = DataReadFile("routine_test_variants.dta", true);
+    if (variants) {
+        TheMoveMgr->LoadRoutineVariants(variants);
+        variants->Release();
+    }
+    TheMoveMgr->ComputeLoadedMoveSet();
+    // LoadRoutineBuilderData()
+    OnPopulateFromMoveMgr();
+}
+
+void HamDirector::MoveKeys(
+    Difficulty diff, MoveDir *moveDir, std::vector<HamMoveKey> &moveKeys
+) {
+    moveKeys.clear();
+    PropKeys *propKeys = GetPropKeys(diff, "move");
+    if (propKeys) {
+        Keys<Symbol, Symbol> *symKeys = propKeys->AsSymbolKeys();
+        for (int i = 0; i < symKeys->size(); i++) {
+            Key<Symbol> curSymKey = (*symKeys)[i];
+            HamMove *move = moveDir->Find<HamMove>(curSymKey.value.Str(), false);
+            if (move) {
+                HamMoveKey key;
+                key.move = move;
+                key.beat = FrameToBeat(curSymKey.frame);
+                moveKeys.push_back(key);
+            }
+        }
+    }
+}
+
+DataNode HamDirector::OnClipSafeToAdd(DataArray *a) {
+    if (a->Int(2)) {
+        for (int i = 0; i < kNumDifficultiesDC2; i++) {
+            if (mSongAnims[(Difficulty)i]) {
+                PropKeys *propKeys = mSongAnims[(Difficulty)i]->GetKeys(
+                    this, DataArrayPtr(Symbol("clip"))
+                );
+                if (propKeys) {
+                    Keys<Symbol, Symbol> *symKeys = propKeys->AsSymbolKeys();
+                    for (int j = 0; j < symKeys->size(); j++) {
+                        Key<Symbol> &curKey = (*symKeys)[j];
+                        curKey.frame =
+                            BeatToFrame(floor(FrameToBeat(curKey.frame) + 0.5f));
+                    }
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+DataNode HamDirector::OnPracticeSafeToAdd(DataArray *a) {
+    if (a->Int(2)) {
+        for (int i = 0; i < kNumDifficultiesDC2; i++) {
+            if (mSongAnims[(Difficulty)i]) {
+                PropKeys *propKeys = mSongAnims[(Difficulty)i]->GetKeys(
+                    this, DataArrayPtr(Symbol("practice"))
+                );
+                if (propKeys) {
+                    Keys<Symbol, Symbol> *symKeys = propKeys->AsSymbolKeys();
+                    for (int j = 0; j < symKeys->size(); j++) {
+                        Key<Symbol> &curKey = (*symKeys)[j];
+                        curKey.frame =
+                            BeatToFrame(floor(FrameToBeat(curKey.frame) + 0.5f));
+                    }
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+void HamDirector::HandleDifficultyChange() {
+    if (TheLoadMgr.EditMode()) {
+        if (TheHamProvider->Property("merge_moves", true)->Int()) {
+            MoveDir *dir = TheHamDirector->GetWorld()->Find<MoveDir>("moves", false);
+            if (dir) {
+                SetupRoutineBuilderAnims();
+                TheMoveMgr->ResetRemixer();
+            }
+        }
+    }
+}
+
+void HamDirector::FindNextShot() {
+    mNextShot = nullptr;
+    Key<Symbol> *start;
+    Key<Symbol> *end;
+    if (GetPracticeFrames(start, end)) {
+        static Symbol skills_mode("skills_mode");
+        static Symbol review("review");
+        bool inReview = TheHamProvider->Property(skills_mode, true)->Sym() == review;
+        static Symbol PRACTICE("PRACTICE");
+        static Symbol PRACTICE_RECAP("PRACTICE_RECAP");
+        static Symbol SKILLS_RESULTS("SKILLS_RESULTS");
+        if (mShot != SKILLS_RESULTS) {
+            if (inReview) {
+                mShot = PRACTICE_RECAP;
+            } else {
+                mShot = PRACTICE;
+            }
+        }
+    }
+    if (!mShot.Null() && mVenue) {
+        std::vector<CameraManager::PropertyFilter> propFilters;
+        AddNumPlayers(propFilters, nullptr);
+        String shotStr(mShot.Str());
+        shotStr.ToLower();
+        if (shotStr.compare(0, 5, "area2") == 0 || shotStr.compare(0, 5, "area3") == 0) {
+            shotStr = mShot;
+            shotStr[4] = '1';
+            mShot = shotStr.c_str();
+        }
+        mNextShot = dynamic_cast<HamCamShot *>(
+            mVenue->GetCameraManager()->FindCameraShot(mShot, propFilters)
+        );
+        if (!mNextShot) {
+            MILO_NOTIFY(
+                "could not find HamCamShot %s in %s at %s, ignoring",
+                mShot,
+                mVenue->GetPathName(),
+                TheTaskMgr.GetMBT()
+            );
+        }
+    }
+}
+
+void HamDirector::SetShot(Symbol s) {
+    if (TheTaskMgr.Seconds(TaskMgr::kRealTime) >= 0
+        && !(SongAnim(0) && SongAnim(0)->GetFrame() < 0)) {
+        static Symbol review("review");
+        static Symbol skills_mode("skills_mode");
+        bool inReview = TheHamProvider->Property(skills_mode, true)->Sym() == review;
+        Key<Symbol> *start;
+        Key<Symbol> *end;
+        if (s == "SKILLS_RESULTS" || !GetPracticeFrames(start, end)
+            || (inReview && s != "DC_PLAYER_FREESTYLE")) {
+            static Symbol mind_control("mind_control");
+            static Symbol gameplay_mode("gameplay_mode");
+            static Symbol game_stage("game_stage");
+            static Symbol playing("playing");
+            static Symbol CAMP_MINDCONTROL_DANCE("CAMP_MINDCONTROL_DANCE");
+            Symbol gameplayModeSym = TheHamProvider->Property(gameplay_mode, true)->Sym();
+            Symbol stageSym = TheHamProvider->Property(game_stage, true)->Sym();
+            if (gameplayModeSym == mind_control && stageSym == playing) {
+                s = CAMP_MINDCONTROL_DANCE;
+            }
+            if (strncmp(s.Str(), "dc_", 3) != 0) {
+                mShot = s;
+                unk140 = true;
+            }
+        }
+    }
+}
+
+float HamDirector::BeatFromTag(Symbol s) {
+    static Symbol practice("practice");
+    RndPropAnim *songAnim = SongAnim(0);
+    PropKeys *propKeys = songAnim->GetKeys(this, DataArrayPtr(practice));
+    if (propKeys) {
+        for (int i = 0; i < propKeys->NumKeys(); i++) {
+            float frame = 0;
+            propKeys->FrameFromIndex(i, frame);
+            if (s == (*propKeys->AsSymbolKeys())[i].value) {
+                return FrameToBeat(frame);
+            }
+        }
+    }
+    return -1;
+}
+
+void HamDirector::Reteleport() {
+    Symbol s;
+    float beat = MsToBeat(TheMaster->StreamMs());
+    static Symbol practice("practice");
+    RndPropAnim *anim =
+        GetPropAnim(TheGameData->Player(0)->GetDifficulty(), "song.anim", false);
+    PropKeys *propKeys = anim->GetKeys(this, DataArrayPtr(practice));
+    int frameIdx = 0;
+    if (propKeys) {
+        frameIdx = propKeys->AsSymbolKeys()->AtFrame(BeatToFrame(beat), s);
+        // GetClipStartAndEndBeats
+    }
+    Vector3 v = Vector3::ZeroVec();
 }

@@ -83,6 +83,7 @@ public:
         return mMoveGraph.HasVariantPair(p1, p2);
     }
     MoveGraph &Graph() { return mMoveGraph; }
+    ObjectDir *MoveDataDir() const { return unk1a8; }
 
     static void Init(const char *);
 

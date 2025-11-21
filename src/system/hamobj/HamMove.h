@@ -102,6 +102,8 @@ public:
 
     bool Scored() const { return mScored; }
     DancerSequence *GetDancerSequence() const { return mDancerSeq; }
+    RndTex *Tex() const { return mTex; }
+    RndTex *SmallTex() const { return mSmallTex; }
 
 protected:
     HamMove();

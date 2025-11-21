@@ -1,8 +1,10 @@
 #pragma once
 #include "PoseFatalities.h"
 #include "SongCollision.h"
+#include "char/CharClip.h"
 #include "char/Character.h"
 #include "char/FileMerger.h"
+#include "gesture/BaseSkeleton.h"
 #include "hamobj/Difficulty.h"
 #include "hamobj/HamCamShot.h"
 #include "hamobj/HamCharacter.h"
@@ -19,6 +21,7 @@
 #include "rndobj/PostProc.h"
 #include "rndobj/PropAnim.h"
 #include "rndobj/PropKeys.h"
+#include "rndobj/Tex.h"
 #include "rndobj/TexRenderer.h"
 #include "utl/MemMgr.h"
 #include "utl/Song.h"
@@ -123,6 +126,11 @@ public:
     void CheckBeginFatal(int, HamMove *, int);
     void LoadCrew(Symbol, Symbol);
     void SetPhraseMetersFlipped(bool);
+    void PoseIconMan(CharClip *, float, RndTex *, bool, CharClip *, float, float);
+    void PoseIconMan(const BaseSkeleton *, RndTex *);
+    void CleanOriginalMoveData();
+    float BeatFromTag(Symbol);
+
     ObjectDir *ClipDir() const { return mClipDir; }
     bool NoTransitions() const { return mNoTransitions; }
     MoveDir *GetMoveDir() const { return static_cast<MoveDir *>(mMoveDir.Ptr()); }
@@ -152,6 +160,7 @@ protected:
     void TeleportChars();
     void OnPopulateMoves();
     void OnPopulateMoveMgr();
+    void OnPopulateFromMoveMgr();
     void OnPopulateFromFile();
     void HudEntered();
     void PickIntroShot();
@@ -173,6 +182,8 @@ protected:
     void
     UpdatePostProcOverlay(const char *, const RndPostProc *, const RndPostProc *, float);
     ObjectDir *GetDifficultyProxy(Difficulty);
+    CharClip *
+    GetClipStartAndEndBeats(Symbol, float &, float &, std::pair<float, float> *);
 
     DataNode OnShotOver(DataArray *);
     DataNode OnPostProcInterp(DataArray *);
