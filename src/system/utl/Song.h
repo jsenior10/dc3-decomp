@@ -39,6 +39,10 @@ public:
     virtual void SetFrame(float frame, float blend);
     virtual float EndFrame() { return mSongEndFrame; }
     // MidiReceiver
+    virtual void OnNewTrack(int) {}
+    virtual void OnEndOfTrack() {}
+    virtual void OnAllTracksRead() {}
+    virtual void OnMidiMessage(int, unsigned char, unsigned char, unsigned char) {}
     virtual void OnText(int tick, const char *text, unsigned char type);
     // RndOverlay::Callback
     virtual float UpdateOverlay(RndOverlay *, float);

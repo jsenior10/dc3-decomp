@@ -4,6 +4,7 @@
 #include "HamDriver.h"
 #include "HamMove.h"
 #include "HamRegulate.h"
+#include "HamSong.h"
 #include "MoveGraph.h"
 #include "PoseFatalities.h"
 #include "SongCollision.h"
@@ -86,7 +87,7 @@ void HamInit() {
         REGISTER_OBJ_FACTORY(HamRibbon);
         REGISTER_OBJ_FACTORY(HamMove);
         REGISTER_OBJ_FACTORY(HamSkeletonConverter);
-        REGISTER_OBJ_FACTORY(HamSkeletonConverter);
+        REGISTER_OBJ_FACTORY(HamSong);
         REGISTER_OBJ_FACTORY(HamSupereasyData);
         REGISTER_OBJ_FACTORY(PracticeSection);
         REGISTER_OBJ_FACTORY(HamVisDir);

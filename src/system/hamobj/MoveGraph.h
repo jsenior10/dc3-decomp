@@ -14,7 +14,7 @@ class MoveGraph : public Hmx::Object {
     friend class MoveVariant;
 
 public:
-    MoveGraph() {}
+    MoveGraph() { mMoveParents.clear(); }
     // Hmx::Object
     virtual ~MoveGraph();
     OBJ_CLASSNAME(MoveGraph)
@@ -45,6 +45,8 @@ public:
     const std::map<Symbol, MoveParent *> &MoveParents() const { return mMoveParents; }
     const std::map<Symbol, MoveVariant *> &MoveVariants() const { return mMoveVariants; }
     const DataArrayPtr &Layout() const { return mLayoutData; }
+
+    NEW_OBJ(MoveGraph);
 
 private:
     std::map<Symbol, MoveParent *> mMoveParents; // 0x2c
