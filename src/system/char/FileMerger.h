@@ -16,7 +16,6 @@ class FileMerger : public Hmx::Object,
                    public OriginalPathable {
 public:
     struct Merger { // taken from RB3 decomp
-    public:
         struct SortBySelected {
             bool operator()(const Merger &a, const Merger &b) {
                 return stricmp(a.mSelected.c_str(), b.mSelected.c_str()) < 0;
@@ -76,13 +75,14 @@ public:
         bool IsProxy() const { return mProxy; }
 
         Symbol mName; // 0x0
-        FilePath mSelected; // 0x4
+        int filler;
+        FilePath mSelected; // 0x8
         FilePath loading; // 0x10
-        FilePath mLoaded; // 0x1c
-        bool mProxy; // 0x28
-        bool unk29; // 0x29
-        bool mPreClear; // 0x2a
-        int mSubdirs; // 0x2c
+        FilePath mLoaded; // 0x18
+        bool mProxy; // 0x20
+        bool unk29; // 0x21
+        bool mPreClear; // 0x22
+        int mSubdirs; // 0x23
         ObjPtr<ObjectDir> mDir; // 0x30
         ObjPtrList<Hmx::Object> mLoadedObjects; // 0x3c
         ObjPtrList<ObjectDir> mLoadedSubdirs; // 0x4c
@@ -113,6 +113,7 @@ public:
 
     static FileMerger *sFmDeleting;
 
+    Merger *FindMerger(Symbol, bool);
     bool StartLoad(bool);
     void Clear();
     void Select(Symbol, const FilePath &, bool);

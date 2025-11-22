@@ -80,6 +80,7 @@ public:
     CharInterest *GetCurrentInterest();
     void SetEnableBlinks(bool, bool);
     bool SetFocusInterest(CharInterest *, int);
+    void ToggleInterestsDebugOverlay();
 
 protected:
     CharEyes();

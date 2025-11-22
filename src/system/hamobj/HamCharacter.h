@@ -42,7 +42,6 @@ public:
     virtual bool SyncProperty(DataNode &, DataArray *, int, PropOp);
     virtual void Save(BinStream &);
     virtual void Copy(const Hmx::Object *, CopyType);
-    virtual void Load(BinStream &);
     virtual void PreLoad(BinStream &);
     virtual void PostLoad(BinStream &);
     // ObjectDir
@@ -68,12 +67,7 @@ public:
     void EnableFacialAnimation(CharLipSync *, float);
     void SetBlinking(bool);
     void SetCampaignVo(const char *);
-    void SetPropShowing(int prop, bool show) {
-        if (mShowableProps.size() > prop) {
-            if (mShowableProps[prop])
-                mShowableProps[prop]->SetShowing(show);
-        }
-    }
+    void SetPropShowing(int prop, bool show);
     String GetCampaignVo();
     void SetOutfit(Symbol);
     void SetOutfitDir(Symbol);
@@ -103,7 +97,10 @@ public:
     bool UseCameraSkeleton() const { return mUseCameraSkeleton; }
     void SetPollWhenHidden(bool poll) { mPollWhenHidden = poll; }
 
+    static bool sLoadVO;
+
 protected:
+    virtual void Load(BinStream &);
     virtual void AddedObject(Hmx::Object *);
     virtual void RemovingObject(Hmx::Object *);
 

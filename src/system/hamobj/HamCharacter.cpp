@@ -1,5 +1,6 @@
 #include "hamobj/HamCharacter.h"
 #include "HamCharacter.h"
+#include "HamRegulate.h"
 #include "char/CharClip.h"
 #include "char/CharEyes.h"
 #include "char/CharFaceServo.h"
@@ -10,8 +11,12 @@
 #include "char/Character.h"
 #include "char/FileMerger.h"
 #include "char/Waypoint.h"
+#include "hamobj/HamDriver.h"
+#include "hamobj/HamGameData.h"
+#include "math/Mtx.h"
 #include "obj/Data.h"
 #include "obj/DataUtl.h"
+#include "obj/Dir.h"
 #include "obj/DirLoader.h"
 #include "obj/Msg.h"
 #include "obj/Object.h"
@@ -22,6 +27,7 @@
 #include "rndobj/Anim.h"
 #include "rndobj/Draw.h"
 #include "rndobj/TexBlender.h"
+#include "rndobj/Trans.h"
 #include "synth/Synth.h"
 #include "utl/BinStream.h"
 #include "utl/FilePath.h"
@@ -31,6 +37,8 @@
 namespace {
     const char *kCrewCardMeshName = "crew_card.mesh";
 }
+
+String mCampaignVO;
 
 HamCharacter::HamCharacter()
     : mCampaignVOBank(0), mCampaignVODir(0), mFileMerger(0), unk2f8(0), mShowBox(0),
@@ -133,6 +141,102 @@ BEGIN_COPYS(HamCharacter)
     END_COPYING_MEMBERS
 END_COPYS
 
+BEGIN_LOADS(HamCharacter)
+    PreLoad(bs);
+    PostLoad(bs);
+END_LOADS
+
+void HamCharacter::PreLoad(BinStream &bs) {
+    LOAD_REVS(bs)
+    ASSERT_REVS(0, 0)
+    Character::PreLoad(bs);
+    bs.PushRev(packRevs(d.altRev, d.rev), this);
+}
+
+void HamCharacter::PostLoad(BinStream &bs) {
+    BinStreamRev d(bs, bs.PopRev(this));
+    Character::PostLoad(bs);
+    if (gLoadingProxyFromDisk) {
+        Symbol s;
+        d >> s;
+    } else {
+        d >> mOutfit;
+    }
+    if (d.rev > 0) {
+        d >> mOutfitDir;
+    }
+    if (d.rev > 1) {
+        d >> mShowBox;
+    }
+    if (d.rev > 2) {
+        d >> mPollWhenHidden;
+        bool active;
+        d >> active;
+        SetTexBlendersActive(active);
+    }
+}
+
+void HamCharacter::SyncObjects() {
+    const char *meshes[2] = { "bone_pelvis.mesh", "spot_neck.mesh" };
+    for (int i = 0; i < 2; i++) {
+        RndTransformable *t = Find<RndTransformable>(meshes[i], false);
+        if (t) {
+            t->SetTransParent(this, false);
+        }
+    }
+    if (unk2fa && BoneServo()) {
+        unk2fa = false;
+        BoneServo()->AcquirePose();
+    }
+    SetTexBlendersActive(mTexBlendersActive);
+    Character::SyncObjects();
+    if (Find<CharLipSyncDriver>("face.lipdrv", false)) {
+        CharFaceServo *servo = Find<CharFaceServo>("face.faceservo", false);
+        CharLipSyncDriver *lipDrv = Find<CharLipSyncDriver>("face.lipdrv", false);
+        EnableFacialAnimation(lipDrv->LipSync(), 0);
+        bool blinking = servo
+            && (!servo->BlinkClipLeftName().Null() && !servo->BlinkClipRightName().Null()
+            );
+        SetBlinking(blinking);
+    }
+    mCrewCardMesh = Find<RndMesh>(kCrewCardMeshName, false);
+}
+
+void HamCharacter::Draw() {
+    if (!mShowing && !mTexBlendersActive) {
+        for (ObjDirItr<RndTexBlender> it(this, true); it != nullptr; ++it) {
+            it->DrawShowing();
+        }
+    }
+    RndDrawable::Draw();
+}
+
+void HamCharacter::DrawShowing() {
+    Character::DrawShowing();
+    if (mShowBox) {
+        mWaypoint->Highlight();
+    }
+}
+
+void HamCharacter::Enter() {
+    Character::Enter();
+    if (BoneServo()) {
+        BoneServo()->SetRegulateWaypoint(nullptr);
+    }
+    if (Regulator()) {
+        Regulator()->SetWaypoint(nullptr);
+    }
+    unk314 = 0;
+    TheSynth->AddPlayHandler(this);
+}
+
+void HamCharacter::Exit() {
+    if (TheSynth) {
+        TheSynth->RemovePlayHandler(this);
+    }
+    Character::Exit();
+}
+
 void HamCharacter::AddedObject(Hmx::Object *obj) {
     Character::AddedObject(obj);
     static Symbol HamIKEffector("HamIKEffector");
@@ -151,22 +255,6 @@ void HamCharacter::RemovingObject(Hmx::Object *obj) {
     if (obj == mFileMerger) {
         mFileMerger = nullptr;
     }
-}
-
-void HamCharacter::Exit() {
-    if (TheSynth) {
-        TheSynth->RemovePlayHandler(this);
-    }
-    Character::Exit();
-}
-
-void HamCharacter::Draw() {
-    if (!mShowing && !mTexBlendersActive) {
-        for (ObjDirItr<RndTexBlender> it(this, true); it != nullptr; ++it) {
-            it->DrawShowing();
-        }
-    }
-    RndDrawable::Draw();
 }
 
 void HamCharacter::Init() {
@@ -235,9 +323,7 @@ bool HamCharacter::InClipTest() {
 }
 
 void HamCharacter::SetIKEffectorWeights(float weight) {
-    for (ObjPtrList<CharWeightable>::iterator it = mIKEffectors.begin();
-         it != mIKEffectors.end();
-         ++it) {
+    FOREACH (it, mIKEffectors) {
         if (*it) {
             (*it)->SetWeight(weight);
         }
@@ -399,9 +485,116 @@ void HamCharacter::SetCampaignVo(const char *cc) {
     }
 }
 
-void HamCharacter::PreLoad(BinStream &bs) {
-    LOAD_REVS(bs)
-    ASSERT_REVS(0, 0)
-    Character::PreLoad(bs);
-    bs.PushRev(packRevs(d.altRev, d.rev), this);
+bool HamCharacter::IsLoading() {
+    if (mFileMerger) {
+        return mFileMerger->HasPendingFiles();
+    } else
+        return false;
+}
+
+HamRegulate *HamCharacter::Regulator() { return Find<HamRegulate>("song.hreg", false); }
+HamDriver *HamCharacter::SongDriver() { return Find<HamDriver>("song.hdrv", false); }
+
+int HamCharacter::SongAnimation() {
+    CharClip *c = nullptr;
+    if (Driver()) {
+        c = Driver()->FirstClip();
+        if (c) {
+            MILO_ASSERT(c->Type() == "main", 0x3AB);
+        }
+    }
+    if (InClipTest() && (c && c->Dir()->Dir() != this)) {
+        return c->Property("clip_skeleton_index", false)->Int();
+    } else if (mUseCameraSkeleton || c) {
+        return -1;
+    } else if (SongDriver()) {
+        c = SongDriver()->FirstClip();
+        if (c) {
+            MILO_ASSERT(c->Type() == "main", 0x3C8);
+            return c->Property("clip_skeleton_index", false)->Int();
+        }
+    }
+    return 0;
+}
+
+bool HamCharacter::GetPropShowing(int prop) {
+    return mShowableProps.size() > prop && mShowableProps[prop]
+        && mShowableProps[prop]->Showing();
+}
+
+void HamCharacter::SetPropShowing(int prop, bool show) {
+    if (mShowableProps.size() > prop) {
+        if (mShowableProps[prop])
+            mShowableProps[prop]->SetShowing(show);
+    }
+}
+
+DataNode HamCharacter::OnConfigureFileMerger(DataArray *a) {
+    FilePathTracker tracker(FileRoot());
+    if (!mFileMerger) {
+        return 0;
+    } else {
+        unk2fa = true;
+        FilePath outfitPath = "";
+        FilePath visemePath = "";
+        FilePath voPath = "";
+        unk2f8 = !strstr(mOutfitDir.Str(), "dancer");
+        if (!mOutfit.Null()) {
+            const char *model = GetOutfitModel(mOutfit);
+            outfitPath.Set(FilePath::Root().c_str(), model);
+            Symbol charSym = GetOutfitCharacter(mOutfit);
+            const char *viseme = GetCharacterViseme(charSym);
+            visemePath.Set(FilePath::Root().c_str(), viseme);
+            if (!unk2f8) {
+                String vo = GetCampaignVo();
+                if (!vo.empty()) {
+                    voPath.Set(FilePath::Root().c_str(), GetCampaignVoMilo().c_str());
+                } else {
+                    voPath.Set(FilePath::Root().c_str(), "sfx/lipsynchelper.milo");
+                }
+                const char *localized = FileLocalize(voPath.c_str(), nullptr);
+                voPath.Set(FilePath::Root().c_str(), localized);
+            }
+        }
+        mFileMerger->Select("outfit", outfitPath, false);
+        FileMerger::Merger *merger = mFileMerger->FindMerger("vo_bank", false);
+        if (merger) {
+            if (sLoadVO) {
+                merger->SetSelected(voPath, false);
+            } else {
+                merger->SetSelected(gNullStr, false);
+            }
+        }
+        FileMerger::Merger *visemeMerger = mFileMerger->FindMerger("viseme", false);
+        if (visemeMerger) {
+            visemeMerger->SetSelected(visemePath, false);
+        }
+        return 0;
+    }
+}
+
+DataNode HamCharacter::OnPostDelete(DataArray *a) {
+    Symbol s = a->Sym(2);
+    if (s == "outfit") {
+        ObjectDir *clipDir = Find<ObjectDir>("clips", false);
+        if (clipDir) {
+            mDriver->SetClips(clipDir);
+        }
+    }
+    return 0;
+}
+
+DataNode HamCharacter::OnToggleInterestDebugOverlay(DataArray *a) {
+    if (mEyes) {
+        mEyes->ToggleInterestsDebugOverlay();
+    }
+    return 0;
+}
+
+DataNode HamCharacter::OnCamTeleport(DataArray *a) {
+    mWaypoint->SetLocalXfm(LocalXfm());
+    if (Regulator()) {
+        Regulator()->SetWaypoint(nullptr);
+    }
+    return 0;
 }

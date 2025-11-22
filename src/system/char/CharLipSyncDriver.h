@@ -3,6 +3,7 @@
 #include "char/CharBones.h"
 #include "char/CharClip.h"
 #include "char/CharDriver.h"
+#include "char/CharLipSync.h"
 #include "char/CharPollable.h"
 #include "char/CharWeightable.h"
 #include "obj/Dir.h"
@@ -45,6 +46,7 @@ public:
     void SetOverrideWeight(float weight) { mOverrideWeight = weight; }
     float GetOverrideWeight() const { return mOverrideWeight; }
     CharClip *OverrideClip() const { return mOverrideClip; }
+    CharLipSync *LipSync() const { return mLipSync; }
 
 protected:
     CharLipSyncDriver();
