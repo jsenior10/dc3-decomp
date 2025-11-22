@@ -30,11 +30,7 @@ private:
 };
 
 class SongSection {
-    friend bool
-    PropSync(SongSection &o, DataNode &_val, DataArray *_prop, int _i, PropOp _op);
-
 public:
-private:
     /** "Measure start and end" */
     Range mMeasureRange; // 0x0
     /** "Pattern start and end" */
@@ -71,6 +67,7 @@ public:
     void SetDefaultReplacer();
     void ClearChosenPatterns();
     int NumReplacers() const { return mMoveReplacers.size(); }
+    const std::vector<SongSection> &SongSections() const { return mSongSections; }
 
     DataNode GetPatternName(int) const;
 

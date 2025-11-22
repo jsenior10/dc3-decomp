@@ -139,6 +139,7 @@ public:
     bool NoTransitions() const { return mNoTransitions; }
     MoveDir *GetMoveDir() const { return static_cast<MoveDir *>(mMoveDir.Ptr()); }
     FileMerger *GetMerger() const { return mMerger; }
+    ObjectDir *MergerDir() const { return mMerger ? mMerger->Dir() : nullptr; }
 
     DataNode OnGetDancerVisemes(DataArray *);
 

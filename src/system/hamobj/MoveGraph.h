@@ -27,6 +27,7 @@ public:
     void CacheLinks();
     MoveVariant *FindNonConstMoveByVariantName(Symbol) const;
     const MoveVariant *FindMoveByVariantName(Symbol) const;
+    const MoveParent *GetMoveParent(Symbol s) const { return GetNonConstMoveParent(s); }
     bool FindVariantPair(
         const MoveVariant *&,
         const MoveVariant *&,
@@ -49,6 +50,8 @@ public:
     NEW_OBJ(MoveGraph);
 
 private:
+    MoveParent *GetNonConstMoveParent(Symbol) const;
+
     std::map<Symbol, MoveParent *> mMoveParents; // 0x2c
     std::map<Symbol, MoveVariant *> mMoveVariants; // 0x44
     DataArrayPtr mLayoutData; // 0x5c

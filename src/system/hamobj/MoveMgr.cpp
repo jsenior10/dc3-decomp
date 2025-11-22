@@ -2,6 +2,7 @@
 #include "SongUtl.h"
 #include "SuperEasyRemixer.h"
 #include "char/CharClip.h"
+#include "char/FileMerger.h"
 #include "flow/PropertyEventProvider.h"
 #include "hamobj/Difficulty.h"
 #include "hamobj/HamDirector.h"
@@ -29,14 +30,14 @@ MoveMgr::MoveMgr() : unk40(0), unka0(0) {
     mPracticePropKeys = nullptr;
     unk168 = false;
     unk14c = "";
-    unk1ac = Hmx::Object::New<SuperEasyRemixer>();
-    unk1ac->SetType("easeup_remixer");
-    unk1a8 = nullptr;
+    mSuperEasyRemixer = Hmx::Object::New<SuperEasyRemixer>();
+    mSuperEasyRemixer->SetType("easeup_remixer");
+    mMoveDataDir = nullptr;
     unk44 = dynamic_cast<SongLayout *>(Hmx::Object::NewObject("SongLayout"));
 }
 
 MoveMgr::~MoveMgr() {
-    RELEASE(unk1ac);
+    RELEASE(mSuperEasyRemixer);
     unk178.clear();
     unk184.clear();
     unk190.clear();
@@ -49,8 +50,55 @@ MoveMgr::~MoveMgr() {
         mClipPropKeys[i] = nullptr;
     }
     mPracticePropKeys = nullptr;
-    unk1a8 = nullptr;
+    mMoveDataDir = nullptr;
     RELEASE(unk44);
+}
+
+BEGIN_HANDLERS(MoveMgr)
+    HANDLE_EXPR(graph_size, (int)MoveParents().size())
+    HANDLE_ACTION(register_song_layout, RegisterSongLayout(_msg->Obj<SongLayout>(2)))
+    HANDLE_ACTION(init_song, InitSong())
+    HANDLE_EXPR(get_song_layout, GetSongLayout())
+    HANDLE_EXPR(get_move_difficulty, GetMoveDifficulty(_msg->ForceSym(2)))
+    HANDLE_ACTION(next_moves, NextMovesToShow(_msg->Array(2), _msg->Int(3)))
+    HANDLE_EXPR(get_char_clip, FindCharClip(_msg->ForceSym(2)))
+    HANDLE_EXPR(get_ham_move, FindHamMove(_msg->ForceSym(2)))
+    HANDLE_EXPR(move_from_move_name, FindHamMoveFromName(_msg->ForceSym(2)))
+    HANDLE_EXPR(
+        variant_name_from_move_name, FindVariantNameFromHamMoveName(_msg->ForceSym(2))
+    )
+    HANDLE_ACTION(fill_routine_from_verses, FillRoutineFromVerses(_msg->Int(2)))
+    HANDLE_ACTION(fill_routine_from_replacer, FillRoutineFromReplacer(_msg->Int(2)))
+    HANDLE_ACTION(prepare_next_choice_set, PrepareNextChoiceSet(_msg->Int(2)))
+    HANDLE_ACTION(
+        pick_random_move_set,
+        PickRandomMoveSet(_msg->ForceSym(2), _msg->Int(3), _msg->Array(4), _msg->Array(5))
+    )
+    HANDLE_EXPR(pick_random_genre, PickRandomGenre())
+    HANDLE_EXPR(get_genre_token_name, GetGenreTokenName(_msg->ForceSym(2)))
+    HANDLE(find_variants, OnFindVariants)
+    HANDLE_EXPR(get_remixer, mSuperEasyRemixer)
+    HANDLE_SUPERCLASS(Hmx::Object)
+END_HANDLERS
+
+Symbol MoveMgr::GetGenreTokenName(Symbol s) {
+    Symbol ret = unk178.front().unk4;
+    FOREACH (it, unk178) {
+        if (it->unk0 == s) {
+            ret = it->unk4;
+            break;
+        }
+    }
+    return ret;
+}
+
+Difficulty MoveMgr::GetMoveDifficulty(Symbol s) {
+    const MoveVariant *mv = mMoveGraph.FindMoveByVariantName(s);
+    if (mv) {
+        return mv->GetDifficulty();
+    } else {
+        return DefaultDifficulty();
+    }
 }
 
 void MoveMgr::Clear() {
@@ -77,7 +125,7 @@ void MoveMgr::Clear() {
     unk19c.clear();
     unk14c = "";
     mMoveGraph.Clear();
-    unk1a8 = nullptr;
+    mMoveDataDir = nullptr;
 }
 
 bool MoveVariantsWithHamMove(const MoveVariant *var, void *v) {
@@ -92,16 +140,16 @@ bool MoveMgr::HasRoutine() const {
     return unk168 && TheHamProvider->Property(gameplay_mode, true)->Sym() != practice;
 }
 
-void MoveMgr::InsertMoveInSong(const MoveVariant *var, int i2, int i3) {
+void MoveMgr::InsertMoveInSong(const MoveVariant *var, int measure, int player) {
     static Symbol clip("clip");
     static Symbol move("move");
     static Symbol practice("practice");
     if (var) {
         Symbol name = var->Name();
-        float beat = i2 * 4;
+        float beat = measure * 4;
         float f4 = BeatToFrame(beat);
-        float f6 = BeatToFrame(i2 > 0 ? beat - 1 : 0);
-        RndPropAnim *anim = TheHamDirector->SongAnim(i3);
+        float f6 = BeatToFrame(measure > 0 ? beat - 1 : 0);
+        RndPropAnim *anim = TheHamDirector->SongAnim(player);
         DataArrayPtr ptr90(clip);
         DataArrayPtr ptr88(move);
         anim->SetKeyVal(TheHamDirector, ptr90, f6, name, true);
@@ -112,9 +160,7 @@ void MoveMgr::InsertMoveInSong(const MoveVariant *var, int i2, int i3) {
 void MoveMgr::SaveRoutine(DataArray *a) const {
     a->Resize(mMoveParents[0].size());
     int i = 0;
-    for (std::vector<const MoveParent *>::const_iterator it = mMoveParents[0].begin();
-         it != mMoveParents[0].end();
-         ++it, ++i) {
+    for (auto it = mMoveParents[0].begin(); it != mMoveParents[0].end(); ++it, ++i) {
         if (*it) {
             a->Node(i) = (*it)->Name();
         } else {
@@ -131,11 +177,8 @@ void MoveMgr::GenerateMoveChoice(
     vec1.clear();
     vec2.clear();
     MILO_LOG("MoveMgr::GenerateMoveChoice %s\n", s1.Str());
-    const std::map<Symbol, MoveParent *> &parents = MoveParents();
     int invalidNum = 0;
-    for (std::map<Symbol, MoveParent *>::const_iterator it = parents.begin();
-         it != parents.end();
-         ++it) {
+    FOREACH (it, MoveParents()) {
         MoveParent *curParent = it->second;
         const MoveVariant *randomVar = curParent->PickRandomVariant();
         MILO_LOG("move=%s genre=%s", randomVar->Name(), randomVar->Genre().Str());
@@ -166,9 +209,7 @@ void MoveMgr::PickRandomMoveSet(Symbol s1, int count, DataArray *a3, DataArray *
     std::vector<const MoveVariant *> wrongMoves;
     std::vector<const MoveVariant *> rightMoves;
     std::set<const MoveVariant *> moveSet;
-    for (std::map<Symbol, MoveParent *>::const_iterator it = MoveParents().begin();
-         it != MoveParents().end();
-         ++it) {
+    FOREACH (it, MoveParents()) {
         const MoveVariant *randomVar = it->second->PickRandomVariant();
         if (randomVar->IsValidForMinigame()) {
             if (it->second->HasCategory(s1)) {
@@ -240,8 +281,8 @@ void MoveMgr::ImportMoveData(const char *filename, bool clear) {
 }
 
 void MoveMgr::LoadMoveData(ObjectDir *dir) {
-    if (unk1a8 != dir) {
-        unk1a8 = dir;
+    if (mMoveDataDir != dir) {
+        mMoveDataDir = dir;
         if (dir) {
             MoveGraph *dirGraph = dir->Find<MoveGraph>("move_graph", true);
             mMoveGraph.Copy(dirGraph, kCopyDeep);
@@ -419,8 +460,8 @@ void MoveMgr::FillRoutineFromParents(int x) {
 }
 
 void MoveMgr::ResetRemixer() {
-    if (unk1ac)
-        unk1ac->Reset();
+    if (mSuperEasyRemixer)
+        mSuperEasyRemixer->Reset();
 }
 
 void MoveMgr::RegisterSongLayout(SongLayout *sl) { unk40 = sl; }
@@ -434,7 +475,7 @@ void MoveMgr::UnRegisterSongLayout(SongLayout *sl) {
 const std::pair<const MoveVariant *, const MoveVariant *> *
 MoveMgr::GetRoutineMeasure(int x, int y) const {
     const std::vector<std::pair<const MoveVariant *, const MoveVariant *> > &vec =
-        unk150[x & 2];
+        unk150[(int)unk150[x].size() - x];
     if (vec.size() <= y) {
         return 0;
     }
@@ -461,29 +502,53 @@ CategoryData MoveMgr::GetCategoryByName(Symbol name) {
 void MoveMgr::SaveRoutineVariants(DataArray *a) const {
     a->Resize(unk150[0].size());
     int idx = 0;
-    for (std::vector<std::pair<const MoveVariant *, const MoveVariant *> >::const_iterator
-             it = unk150[0].begin();
-         it != unk150[0].end();
-         ++it, ++idx) {
+    for (auto it = unk150[0].begin(); it != unk150[0].end(); ++it, ++idx) {
         if (it->first) {
             Symbol first_name = it->first->Name();
-            Symbol second_name = first_name;
-            if (it->second)
-                second_name = it->second->Name();
-            else
-                second_name = first_name;
-            a->Node(idx) = DataArrayPtr(first_name, second_name);
+            a->Node(idx) =
+                DataArrayPtr(first_name, it->second ? it->second->Name() : first_name);
         } else {
             a->Node(idx) = DataArrayPtr(0, 0);
         }
     }
 }
 
+void MoveMgr::LoadRoutineVariants(const DataArray *a) {
+    int aSize = a->Size();
+    int idx = 0;
+    auto it = unk150[0].begin();
+    for (; it != unk150[0].end() && idx < aSize; ++it, ++idx) {
+        mMoveParents[0][idx] = nullptr;
+        it->first = nullptr;
+        it->second = nullptr;
+        DataArray *curArr = a->Array(idx);
+        if (curArr->Type(0) == kDataSymbol && curArr->Type(1) == kDataSymbol) {
+            it->first = mMoveGraph.FindMoveByVariantName(curArr->Sym(0));
+            it->second = mMoveGraph.FindMoveByVariantName(curArr->Sym(1));
+            if (it->first) {
+                mMoveParents[0][idx] = it->first->Parent();
+            }
+        }
+    }
+    for (; it != unk150[0].end(); ++it, ++idx) {
+        mMoveParents[0][idx] = nullptr;
+        it->first = nullptr;
+        it->second = nullptr;
+    }
+    for (int i = 0; i < unk150[0].size(); i++) {
+        const MoveVariant *mv = unk150[0][i].first;
+        for (int j = 0; j < 2; j++) {
+            InsertMoveInSong(mv, i, j);
+        }
+    }
+    unk168 = true;
+}
+
 HamMove *MoveMgr::FindHamMoveFromName(Symbol name) const {
     if (name == Symbol("") && TheHamDirector->GetMoveDir()) {
         HamMove *move = TheHamDirector->GetMoveDir()->Find<HamMove>(name.Str(), false);
         if (!move) {
-            move = TheHamDirector->GetMerger()->Dir()->Find<HamMove>(name.Str(), false);
+            move = TheHamDirector->MergerDir()->Find<HamMove>(name.Str(), false);
             if (!move) {
                 MILO_NOTIFY(
                     "MoveMgr::FindHamMoveFromName couldn't find a move for %s", name
@@ -495,17 +560,119 @@ HamMove *MoveMgr::FindHamMoveFromName(Symbol name) const {
     return nullptr;
 }
 
-CharClip *MoveMgr::FindCharClip(Symbol s) const {
-    for (std::set<const MoveVariant *>::const_iterator it = unk104.begin();
-         it != unk104.end();
-         ++it) {
-        if ((*it)->Name() = s) {
+CharClip *MoveMgr::FindCharClip(Symbol name) const {
+    Symbol nameSym = name;
+    FOREACH (it, unk104) {
+        if ((*it)->Parent()->Name() == nameSym) {
+            nameSym = (*it)->Name();
             break;
         }
     }
-    CharClip *clip = TheHamDirector->ClipDir()->Find<CharClip>(s.Str(), false);
+    CharClip *clip = TheHamDirector->ClipDir()->Find<CharClip>(nameSym.Str(), false);
     if (!clip) {
-        MILO_LOG("Error: could not find clip for %s\n", s.Str());
+        MILO_LOG("Error: could not find clip for %s\n", nameSym.Str());
     }
     return clip;
+}
+
+DataNode MoveMgr::OnFindVariants(DataArray *a) {
+    static Symbol unknown("unknown");
+    DataArrayPtr ptr(unknown, unknown);
+    const MoveParent *p1 = mMoveGraph.GetMoveParent(a->ForceSym(2));
+    const MoveParent *p2 = mMoveGraph.GetMoveParent(a->ForceSym(3));
+    const MoveVariant *mv1 = nullptr;
+    const MoveVariant *mv2 = nullptr;
+    mMoveGraph.FindVariantPair(mv1, mv2, p1, p2, nullptr, nullptr, "", false);
+    if (mv1) {
+        ptr->Node(0) = mv1->Name();
+    } else if (p1) {
+        ptr->Node(0) = p1->Variants().front()->Name();
+    } else {
+        ptr->Node(0) = "<unknown>";
+    }
+    if (mv2) {
+        ptr->Node(1) = mv2->Name();
+    } else if (p2) {
+        ptr->Node(1) = p2->Variants().front()->Name();
+    } else {
+        ptr->Node(1) = "<unknown>";
+    }
+    return ptr;
+}
+
+HamMove *MoveMgr::FindHamMove(Symbol name) const {
+    if (*name.Str() == '\0') {
+        return nullptr;
+    } else {
+        Symbol nameSym = name;
+        FOREACH (it, unk104) {
+            if ((*it)->Parent()->Name() == nameSym) {
+                nameSym = (*it)->Name();
+                break;
+            }
+        }
+        const MoveVariant *mv = mMoveGraph.FindMoveByVariantName(nameSym);
+        int numGraphNodes = MoveParents().size();
+        if (!mv) {
+            MILO_LOG(
+                "Error: could not find a move in graph (%d nodes) called %s\n",
+                numGraphNodes,
+                nameSym.Str()
+            );
+        } else {
+            nameSym = mv->HamMoveName();
+        }
+        HamMove *move = TheHamDirector->GetMoveDir()->Find<HamMove>(nameSym.Str(), false);
+        if (!move) {
+            move = TheHamDirector->MergerDir()->Find<HamMove>(nameSym.Str(), false);
+        }
+        return move;
+    }
+}
+
+Symbol MoveMgr::FindVariantNameFromHamMoveName(Symbol name) const {
+    std::vector<const MoveVariant *> moveVariants;
+    mMoveGraph.GatherVariants(&moveVariants, MoveVariantsWithHamMove, &name);
+    if (moveVariants.size() != 0) {
+        return moveVariants.front()->Name();
+    } else {
+        return "";
+    }
+}
+
+void MoveMgr::InitSong() {
+    SongInit();
+    unk16c.clear();
+    int i12 = 0x7fffffff;
+    int i13 = 0;
+    unk40 = GetSongLayout();
+    FOREACH (it, unk40->SongSections()) {
+        if (i12 >= it->mMeasureRange.start) {
+            i12 = it->mMeasureRange.start;
+        }
+        if (i13 <= it->mMeasureRange.end) {
+            i13 = it->mMeasureRange.end;
+        }
+    }
+    mMoveParents[0].resize(i13 + 2);
+    unk150[0].resize(i13 + 2);
+    unk16c.resize(i13 + 2);
+    unk104.clear();
+    FOREACH (it, mMoveParents[0]) {
+        *it = nullptr;
+    }
+    FOREACH (it, unk150[0]) {
+        it->first = nullptr;
+        it->second = nullptr;
+    }
+    FOREACH (it, unk16c) {
+        it->unk0[0] = 0;
+        it->unk0[1] = 0;
+        it->unk0[2] = 0;
+        it->unk0[3] = 0;
+    }
+    ComputeRandomChoiceSet(0);
+    ComputeLoadedMoveSet();
+    TheHamDirector->CleanOriginalMoveData();
+    LoadMoveData(mMovesDir->Find<ObjectDir>("move_data", false));
 }
