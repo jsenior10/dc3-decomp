@@ -132,6 +132,9 @@ public:
     float BeatFromTag(Symbol);
     void UnloadMergers();
 
+    void DrawIconMan(Symbol, Symbol, Symbol, float, float, RndTex *);
+    void DrawIconMan(Difficulty, float, float, float, float, RndTex *);
+
     ObjectDir *ClipDir() const { return mClipDir; }
     bool NoTransitions() const { return mNoTransitions; }
     MoveDir *GetMoveDir() const { return static_cast<MoveDir *>(mMoveDir.Ptr()); }

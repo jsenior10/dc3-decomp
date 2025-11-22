@@ -1,6 +1,9 @@
 #include "hamobj/HamIconMan.h"
 #include "hamobj/Difficulty.h"
+#include "hamobj/HamDirector.h"
+#include "hamobj/SongUtl.h"
 #include "obj/Object.h"
+#include "obj/Task.h"
 #include "rndobj/Anim.h"
 #include "rndobj/Draw.h"
 
@@ -67,8 +70,44 @@ BEGIN_LOADS(HamIconMan)
     LOAD_SUPERCLASS(Hmx::Object)
     LOAD_SUPERCLASS(RndAnimatable)
     LOAD_SUPERCLASS(RndDrawable)
-    bs >> mTexture;
-    bs >> mStartBeat >> mEndBeat >> mOffset;
+    d >> mTexture;
+    d >> mStartBeat >> mEndBeat >> mOffset;
     if (d.rev > 0) {
+        int diff;
+        d >> diff;
+        mDifficulty = (Difficulty)diff;
     }
 END_LOADS
+
+void HamIconMan::DrawShowing() {
+    if (TheHamDirector) {
+        if (mCharClip) {
+            float beat;
+            if (mBPMOverride > 0) {
+                float uiSeconds = TheTaskMgr.UISeconds() * 0.016666668f;
+                beat = uiSeconds * mBPMOverride;
+            } else {
+                beat = FrameToBeat(TheHamDirector->SongAnim(0)->GetFrame());
+            }
+            beat = (float)fmod(beat, 4.0f) + 1.0f;
+            if (mPlayIntroTransition && beat > 4.5f) {
+                beat -= 4.0f;
+            }
+            TheHamDirector->PoseIconMan(
+                mCharClip, mCharClip->StartBeat() + beat, mTexture, true, nullptr, 0, 0
+            );
+        } else {
+            float clamp = Clamp(0.0f, mEndBeat - mStartBeat, GetFrame());
+            float beat = mStartBeat + clamp;
+            if (mMoveName != "") {
+                TheHamDirector->DrawIconMan(
+                    mMoveName, mMoveName, mMoveName, clamp, mOffset, mTexture
+                );
+            } else {
+                TheHamDirector->DrawIconMan(
+                    mDifficulty, beat, mStartBeat, mEndBeat - mStartBeat, mOffset, mTexture
+                );
+            }
+        }
+    }
+}
