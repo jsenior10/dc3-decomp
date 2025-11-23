@@ -54,7 +54,7 @@ public:
     float ElapsedTime();
     int NumMarkers() const;
     bool IsMoggReady() const;
-    SynthSample *Sample() { return mSynthSample; }
+    SynthSample *Sample();
 
     OBJ_MEM_OVERLOAD(0x16)
     NEW_OBJ(Sound)

@@ -337,3 +337,5 @@ DataNode Sound::OnPlay(DataArray *a) {
     Play(volumeArg, panArg, transposeArg, nullptr, 0);
     return 0;
 }
+
+SynthSample *Sound::Sample() { return mSynthSample; }
