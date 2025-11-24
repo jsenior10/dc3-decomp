@@ -46,6 +46,10 @@ protected:
     HamSkeletonConverter();
 
     void GetParentWorldXfm(RndTransformable *, Transform &, SkeletonJoint);
+    void SetQuatBoneValue(String, Hmx::Quat);
+    void SetRotzBoneValue(String, float);
+    void SetPosBoneValue(String, Vector3);
+    void RotateTowards(const Vector3 &, const Vector3 &, float, Vector3 &);
 
     /** "The CharBones object to add into." */
     ObjPtr<CharBonesObject> mBones; // 0x14

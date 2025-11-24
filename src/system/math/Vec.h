@@ -89,6 +89,15 @@ public:
         y = f2;
         z = f3;
     }
+    // this is really stupid
+    // from what we can tell, HMX doesn't have an operator= overload for Vector3
+    // but, there are some situations where you wanna set one Vector3's coords to another
+    // so this is the "happy" middle ground for that. lol. lmao.
+    void Set(const Vector3 &v) {
+        x = v.x;
+        y = v.y;
+        z = v.z;
+    }
     void Zero() { x = y = z = 0.0f; }
 
     float X() const { return x; }
