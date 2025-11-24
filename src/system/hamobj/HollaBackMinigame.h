@@ -38,6 +38,9 @@ public:
     void SetNumMoves(int);
     void SetState(State);
     void StartShoutOut(const char *);
+    void DecipherShoutOut(float);
+    void WinShoutOut();
+    float NailedMovesInRoutinePct();
 
     OBJ_MEM_OVERLOAD(0x21)
     NEW_OBJ(HollaBackMinigame)
@@ -49,7 +52,7 @@ protected:
     int unkc; // 0xc
     Symbol unk10[0x100]; // 0x10
     bool unk410; // 0x410
-    int unk414; // 0x414 - state
+    int mState; // 0x414 - state
     int unk418;
     int mNumMoves; // 0x41c
     int unk420;
@@ -70,6 +73,7 @@ protected:
     bool unk46c;
     float mInitialMusicJump; // 0x470
     bool unk474;
+    bool unk475;
     Sound *mSound; // 0x478
     int unk47c;
     bool unk480;
