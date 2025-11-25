@@ -41,6 +41,15 @@ public:
             Drawables in it are guaranteed to be drawn last." */
         DrawPtrVec mTranslucent; // 0x20
     };
+
+    enum PollState {
+        kCharCreated = 0,
+        kCharSyncObject = 1,
+        kCharEntered = 2,
+        kCharPolled = 3,
+        kCharExited = 4,
+    };
+
     Character();
     // Hmx::Object
     virtual ~Character();
@@ -96,7 +105,7 @@ public:
     void ForceBlink();
     void CopyBoundingSphere(Character *);
     CharServoBone *BoneServo();
-    void SetTeleport(bool t) { unk298 = t; }
+    void SetTeleport(bool t) { mTeleported = t; }
     CharDriver *Driver() const { return mDriver; }
     bool DebugDrawInterestObjects() const { return mDebugDrawInterestObjects; }
 
@@ -109,6 +118,8 @@ protected:
     virtual void RemovingObject(Hmx::Object *);
 
     void UnhookShadow();
+    void RemoveFromDraws(DrawPtrVec &);
+    void SyncShadow();
 
     static Character *sCurrent;
 
@@ -138,13 +149,13 @@ protected:
     /** "bounding sphere for the character, fixed" */
     Sphere mBounding; // 0x268
     std::vector<ShadowBone *> mShadowBones; // 0x27c
-    int unk288;
+    PollState mPollState; // 0x288
     /** "Test Character by animating it" */
     CharacterTest *mTest; // 0x28c
     /** "if true, is frozen in place, no polling happens" */
     bool mFrozen; // 0x290
     int unk294;
-    bool unk298;
+    bool mTeleported;
     /** "select an interest object here and select 'force_interest' below
         to force the character to look at it." */
     Symbol mInterestToForce; // 0x29c
@@ -155,13 +166,13 @@ protected:
     bool mDebugDrawInterestObjects; // 0x2d4
 };
 
-class CharacterTracker {
+class AutoSetCurrentCharacter {
 public:
-    CharacterTracker(Character *c) : mSavedChar(Character::Current()) {
+    AutoSetCurrentCharacter(Character *c) : mSavedChar(Character::Current()) {
         Character::SetCurrent(c);
     }
 
-    ~CharacterTracker() { Character::SetCurrent(mSavedChar); }
+    ~AutoSetCurrentCharacter() { Character::SetCurrent(mSavedChar); }
 
 private:
     Character *mSavedChar;

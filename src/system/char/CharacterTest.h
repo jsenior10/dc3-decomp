@@ -21,6 +21,7 @@ public:
     virtual DataNode Handle(DataArray *, bool);
 
     void Save(BinStream &);
+    void Load(BinStream &);
 
     ObjectDir *Clips() const { return mDriver ? mDriver->ClipDir() : nullptr; }
     bool MovingSelf() const;
@@ -30,6 +31,7 @@ public:
     void AddDefaults();
     void Walk();
     void Recenter();
+    void Poll();
 
 protected:
     void Sync();

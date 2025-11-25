@@ -67,3 +67,4 @@ void ClearAO(RndMesh *);
 void BurnXfm(RndMesh *, bool);
 void AttachMesh(RndMesh *, RndMesh *);
 void BuildFromBSP(RndMesh *);
+void ConvertBonesToTranses(ObjectDir *, bool);

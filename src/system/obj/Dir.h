@@ -287,7 +287,7 @@ public:
     OBJ_MEM_OVERLOAD(0x111);
 
 protected:
-    virtual void AddedObject(Hmx::Object *) {}
+    virtual void AddedObject(Hmx::Object *);
     virtual void RemovingObject(Hmx::Object *);
     virtual void OldLoadProxies(BinStream &, int);
 

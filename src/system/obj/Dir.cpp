@@ -647,3 +647,5 @@ void ObjectDir::Save(BinStream &bs) {
     std::vector<bool> boolVec;
     boolVec.resize(mInlinedDirs.size(), false);
 }
+
+void ObjectDir::AddedObject(Hmx::Object *) {}

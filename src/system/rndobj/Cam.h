@@ -1,5 +1,6 @@
 #pragma once
 #include "math/Mtx.h"
+#include "math/Sphere.h"
 #include "math/Vec.h"
 #include "obj/Data.h"
 #include "obj/Object.h"
@@ -44,6 +45,7 @@ public:
         mScreenRect = rect;
         UpdateLocal();
     }
+    float CalcScreenHeight(const Sphere &);
 
     NEW_OBJ(RndCam);
     OBJ_MEM_OVERLOAD(0x1B);

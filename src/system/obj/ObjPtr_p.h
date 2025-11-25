@@ -291,7 +291,7 @@ void *ObjPtrList<T1, T2>::Node::operator new(unsigned int s) {
 
 template <class T1, class T2>
 void ObjPtrList<T1, T2>::Node::operator delete(void *v) {
-    PoolFree(sizeof(v), v, __FILE__, 0x122, "ObjPtrList_node");
+    PoolFree(sizeof(Node), v, __FILE__, 0x122, "ObjPtrList_node");
 }
 
 template <class T1, class T2>

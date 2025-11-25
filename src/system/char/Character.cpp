@@ -2,18 +2,31 @@
 #include "CharInterest.h"
 #include "Waypoint.h"
 #include "char/CharEyes.h"
+#include "char/CharPollable.h"
+#include "char/CharServoBone.h"
 #include "char/CharacterTest.h"
+#include "char/CharUtl.h"
+#include "char/Waypoint.h"
+#include "math/Mtx.h"
 #include "obj/Dir.h"
 #include "obj/Object.h"
 #include "os/Debug.h"
+#include "os/System.h"
+#include "rndobj/Anim.h"
 #include "rndobj/Cam.h"
 #include "rndobj/Dir.h"
+#include "rndobj/Draw.h"
+#include "rndobj/Group.h"
+#include "rndobj/Mesh.h"
 #include "rndobj/Trans.h"
+#include "rndobj/Utl.h"
 #include "utl/BinStream.h"
+#include "utl/Loader.h"
 #include "utl/MemMgr.h"
 #include "utl/Symbol.h"
 
 Character *Character::sCurrent;
+Character *gCharMe;
 
 // declaration goes here because of the MEM_OVERLOAD showing .cpp
 class ShadowBone : public RndTransformable {
@@ -24,20 +37,34 @@ public:
     void SetParent(RndTransformable *parent) { mParent = parent; }
 
     MEM_OVERLOAD(ShadowBone, 0x29)
-
+private:
     ObjPtr<RndTransformable> mParent; // 0x90
 };
+
+#pragma region Hmx::Object
 
 Character::Character()
     : mLods(this), mLastLod(0), mForceLod(kLOD0), mShadow(this), mTranslucent(this),
       mDriver(0), mSelfShadow(0), unk251(0), unk252(1), mSphereBase(this, this),
-      mBounding(Vector3(0, 0, 0), 0), unk288(0), mTest(new CharacterTest(this)),
-      mFrozen(0), unk294(3), unk298(1), unk2a0(this), mShowableProps(this),
-      mDebugDrawInterestObjects(false) {}
+      mBounding(Vector3(0, 0, 0), 0), mPollState(kCharCreated),
+      mTest(new CharacterTest(this)), mFrozen(0), unk294(3), mTeleported(1), unk2a0(this),
+      mShowableProps(this), mDebugDrawInterestObjects(false) {}
 
 Character::~Character() {
     UnhookShadow();
     delete mTest;
+}
+
+bool Character::Replace(ObjRef *from, Hmx::Object *to) {
+    if (from == &mSphereBase) {
+        Hmx::Object *obj = mSphereBase.SetObj(to);
+        if (!obj) {
+            mSphereBase = this;
+        }
+        return true;
+    } else {
+        return RndDir::Replace(from, to);
+    }
 }
 
 BEGIN_HANDLERS(Character)
@@ -87,7 +114,6 @@ BEGIN_PROPSYNCS(Character)
     SYNC_SUPERCLASS(RndDir)
 END_PROPSYNCS
 
-// class BinStream & __cdecl operator<<(class BinStream &, struct Character::Lod const &)
 BinStream &operator<<(BinStream &bs, const Character::Lod &lod) {
     bs << lod.mScreenSize;
     bs << lod.mOpaque;
@@ -134,26 +160,342 @@ BEGIN_COPYS(Character)
     END_COPYING_MEMBERS
 END_COPYS
 
+void Character::PreLoad(BinStream &bs) {
+    LOAD_REVS(bs)
+    ASSERT_REVS(0x15, 0)
+    if (d.rev > 1) {
+        RndDir::PreLoad(bs);
+        if (d.rev < 7) {
+            SetRate(k1_fpb);
+        }
+    } else {
+        int revToPush;
+        d >> revToPush;
+        if (revToPush > 3) {
+            RndTransformable::Load(bs);
+            RndDrawable::Load(bs);
+        }
+        ObjectDir::PreLoad(bs);
+        bs.PushRev(revToPush, this);
+    }
+    d.PushRev(this);
+}
+
+BinStreamRev &operator>>(BinStreamRev &, Character::Lod &);
+void OldGroupLoad(DrawPtrVec &, BinStream &);
+
+void Character::PostLoad(BinStream &bs) {
+    BinStreamRev d(bs, bs.PopRev(this));
+    if (d.rev > 1) {
+        RndDir::PostLoad(bs);
+        if (d.rev < 4 || !IsProxy()) {
+            if (d.rev < 9) {
+                ObjVector<ObjVector<Lod> > lods(this);
+                d >> lods;
+                if (lods.size() != 0)
+                    mLods = lods[0];
+                else
+                    mLods.clear();
+            } else {
+                d >> mLods;
+            }
+            if (d.rev < 0x12) {
+                OldGroupLoad(mShadow, bs);
+            } else {
+                bs >> mShadow;
+            }
+            if (d.rev < 3) {
+                mSelfShadow = false;
+            } else {
+                d >> mSelfShadow;
+            }
+            if (d.rev > 4) {
+                ObjPtr<RndTransformable> t(this);
+                bs >> t;
+                mSphereBase = t.Ptr();
+            } else {
+                mSphereBase = this;
+            }
+            if (d.rev > 0xA) {
+                d >> mBounding;
+            } else {
+                mBounding.Zero();
+            }
+            if (d.rev < 0xC) {
+                if (mSphereBase == this) {
+                    if (mBounding.GetRadius() == 0) {
+                        if (GetSphere().GetRadius() != 0) {
+                            Multiply(GetSphere(), mSphereBase->WorldXfm(), mBounding);
+                        }
+                    }
+                }
+            }
+            if (d.rev > 0xC) {
+                d >> mFrozen;
+            }
+            if (d.rev > 0xE) {
+                d >> (int &)mForceLod;
+            }
+            if (d.rev > 0x10) {
+                if (d.rev < 0x12) {
+                    OldGroupLoad(mTranslucent, bs);
+                } else {
+                    d >> mTranslucent;
+                }
+            }
+            if (d.rev == 0x13 || d.rev == 0x14) {
+                ObjPtrVec<RndGroup> vec(this);
+                d >> vec;
+            } else if (d.rev > 0x14) {
+                d >> mShowableProps;
+            }
+            if (d.rev > 9) {
+                mTest->Load(bs);
+            }
+        } else if (d.rev > 0xF) {
+            mTest->Load(bs);
+        }
+    } else {
+        int otherRev = bs.PopRev(this);
+        ObjectDir::PostLoad(bs);
+        if (otherRev > 4) {
+            bs >> mEnv;
+        }
+        if (otherRev > 3) {
+            gCharMe = d.rev < 6 ? this : nullptr;
+            ObjVector<ObjVector<Character::Lod> > lods(this);
+            d >> lods;
+            if (lods.size() != 0)
+                mLods = lods[0];
+            else
+                mLods.clear();
+        } else {
+            mLods.clear();
+        }
+        if (otherRev > 6) {
+            if (d.rev < 0x12) {
+                OldGroupLoad(mShadow, bs);
+            } else {
+                d >> mShadow;
+            }
+        }
+    }
+    if (d.rev < 8) {
+        float rad = GetSphere().GetRadius();
+        for (int i = 0; i < mLods.size(); i++) {
+            mLods[i].mScreenSize /= rad;
+        }
+    }
+}
+
+#pragma endregion
+#pragma region RndDrawable
+
+void Character::UpdateSphere() {
+    Sphere s78 = mBounding;
+    Transform tf38;
+    FastInvert(WorldXfm(), tf38);
+    Transform tf68;
+    Multiply(mSphereBase->WorldXfm(), tf38, tf68);
+    FastInvert(tf68, tf68);
+    Multiply(s78, tf68, s78);
+    SetSphere(s78);
+}
+
+void Character::DrawShadow(const Transform &xfm, float f2) {
+    if (mShowing && !mShadow.empty()) {
+        Vector3 myWorldVec = WorldXfm().v;
+        Plane pl140;
+        pl140.Set(0, 0, 1, 0);
+        MILO_ASSERT(GetGfxMode() == kOldGfx, 0x2E7);
+        Transform tf90;
+        Transpose(xfm, tf90);
+        Plane pl130;
+        Multiply(pl140, tf90, pl130);
+        // more...
+        mShadow.Draw();
+    }
+}
+
+#pragma endregion
+#pragma region RndPollable
+
+void Character::Poll() {
+    START_AUTO_TIMER("char_poll");
+    AutoSetCurrentCharacter scope(this);
+    if (mFrozen)
+        return;
+    else {
+        if (TheLoadMgr.EditMode()) {
+            mTest->Poll();
+        }
+        RndDir::Poll();
+        if (mShowing) {
+            mTeleported = false;
+        }
+        mPollState = kCharPolled;
+    }
+}
+
 void Character::Enter() {
-    CharacterTracker scope(this);
+    AutoSetCurrentCharacter scope(this);
     mFrozen = false;
-    unk288 = 2;
+    mPollState = kCharEntered;
     mForceLod = kLODPerFrame;
     mLastLod = 0;
-    unk298 = true;
+    mTeleported = true;
     mInterestToForce = Symbol();
     RndDir::Enter();
 }
 
 void Character::Exit() {
-    CharacterTracker scope(this);
-    unk288 = 4;
+    AutoSetCurrentCharacter scope(this);
+    mPollState = kCharExited;
     RndDir::Exit();
 }
 
+#pragma endregion
+#pragma region ObjectDir
+
+void Character::SyncObjects() {
+    mPollState = kCharSyncObject;
+    RndMesh *mesh = Find<RndMesh>("bone_pelvis.mesh", false);
+    if (mesh) {
+        ConvertBonesToTranses(this, false);
+    }
+    RndDir::SyncObjects();
+    if (!IsSubDir()) {
+        RemoveFromDraws(mTranslucent);
+        for (int i = 0; i < mLods.size(); i++) {
+            RemoveFromDraws(mLods[i].mOpaque);
+            RemoveFromDraws(mLods[i].mTranslucent);
+        }
+        SyncShadow();
+        CharPollableSorter sorter;
+        sorter.Sort(mPolls);
+    }
+}
+
+void Character::AddedObject(Hmx::Object *o) {
+    if (dynamic_cast<CharPollable *>(o)) {
+        CharDriver *driver = dynamic_cast<CharDriver *>(o);
+        if (driver) {
+            if (streq(driver->Name(), "main.drv")) {
+                mDriver = driver;
+            }
+        }
+    }
+    ObjectDir::AddedObject(o);
+}
+
+void Character::RemovingObject(Hmx::Object *o) {
+    if (o == mDriver) {
+        mDriver = nullptr;
+    }
+    RndDir::RemovingObject(o);
+}
+
+#pragma endregion
+#pragma region Character Virtual Methods
+
+void Character::CollideListSubParts(
+    const Segment &s, std::list<RndDrawable::Collision> &c
+) {
+    if (mLastLod >= 0 && mLastLod < mLods.size()) {
+        mLods[mLastLod].mOpaque.CollideList(s, c);
+    }
+    RndDir::CollideListSubParts(s, c);
+}
+
+void Character::Teleport(Waypoint *wp) {
+    if (wp) {
+        Transform worldXfm = wp->WorldXfm();
+        Normalize(worldXfm.m, worldXfm.m);
+        SetLocalXfm(worldXfm);
+    }
+    if (BoneServo()) {
+        BoneServo()->SetRegulateWaypoint(wp);
+    }
+    mTeleported = true;
+}
+
+void Character::CalcBoundingSphere() {
+    Transform tf50(mLocalXfm);
+    DirtyLocalXfm().Reset();
+    mBounding.Zero();
+    static const char *boneNames[5] = { "bone_head.mesh",
+                                        "bone_R-ankle.mesh",
+                                        "bone_L-ankle.mesh",
+                                        "bone_R-toe.mesh",
+                                        "bone_L-toe.mesh" };
+    for (int i = 0; i < 5; i++) {
+        RndTransformable *t = Find<RndTransformable>(boneNames[i], false);
+        if (t) {
+            mBounding.GrowToContain(Sphere(t->WorldXfm().v, 0.1f));
+        }
+    }
+
+    RndTransformable *transLClavicle = CharUtlFindBoneTrans("bone_L-clavicle", this);
+    if (transLClavicle) {
+        RndTransformable *transLHand = CharUtlFindBoneTrans("bone_L-hand", this);
+        if (transLHand) {
+            Vector3 vClavicle = transLClavicle->WorldXfm().v;
+            vClavicle.z += Distance(vClavicle, transLHand->WorldXfm().v);
+            mBounding.GrowToContain(Sphere(vClavicle, 7.0f));
+        }
+    }
+    RndTransformable *transRClavicle = CharUtlFindBoneTrans("bone_R-clavicle", this);
+    if (transRClavicle) {
+        RndTransformable *transRHand = CharUtlFindBoneTrans("bone_R-hand", this);
+        if (transRHand) {
+            Vector3 vClavicle = transRClavicle->WorldXfm().v;
+            vClavicle.z += Distance(vClavicle, transRHand->WorldXfm().v);
+            mBounding.GrowToContain(Sphere(vClavicle, 7.0f));
+        }
+    }
+    if (mBounding.GetRadius() == 0) {
+        for (ObjDirItr<RndTransformable> it(this, true); it != nullptr; ++it) {
+            if (strneq(it->Name(), "bone_", 5) || strneq(it->Name(), "spot_", 5)) {
+                mBounding.GrowToContain(Sphere(it->WorldXfm().v, 0.1f));
+            }
+            RndMesh *mesh = dynamic_cast<RndMesh *>(&*it);
+            if (mesh && mesh->Showing()) {
+                for (int i = 0; i < mesh->Verts().size(); i++) {
+                    mBounding.GrowToContain(
+                        Sphere(mesh->SkinVertex(mesh->Verts(i), nullptr), 0.001f)
+                    );
+                }
+            }
+        }
+    }
+    UpdateSphere();
+    DirtyLocalXfm() = tf50;
+}
+
+bool Character::MakeWorldSphere(Sphere &s, bool b) {
+    if (mSphere.GetRadius()) {
+        Multiply(mSphere, mSphereBase->WorldXfm(), s);
+        return true;
+    } else
+        return false;
+}
+
+float Character::ComputeScreenSize(RndCam *cam) {
+    Sphere sphere;
+    MakeWorldSphere(sphere, false);
+    if (cam && sphere > cam->WorldFrustum()) {
+        return 0;
+    } else {
+        sphere.radius = 1.0f;
+        if (cam)
+            return cam->CalcScreenHeight(sphere);
+        else
+            return 1;
+    }
+}
+
 void Character::DrawOpaque() {
-    for (std::vector<RndDrawable *>::iterator it = mDraws.begin(); it != mDraws.end();
-         ++it) {
+    FOREACH (it, mDraws) {
         (*it)->Draw();
     }
     Lod *lod = mLods.size() != 0 ? &mLods[mLastLod] : nullptr;
@@ -167,6 +509,28 @@ void Character::DrawTranslucent() {
     Lod *lod = mLods.size() != 0 ? &mLods[mLastLod] : nullptr;
     if (lod) {
         lod->mTranslucent.Draw();
+    }
+}
+
+CharEyes *Character::GetEyes() { return Find<CharEyes>("CharEyes.eyes", false); }
+
+bool Character::SetFocusInterest(CharInterest *interest, int i) {
+    CharEyes *eyes = GetEyes();
+    return eyes ? eyes->SetFocusInterest(interest, i) : false;
+}
+
+void Character::SetInterestFilterFlags(int i) {
+    CharEyes *eyes = GetEyes();
+    if (eyes) {
+        eyes->SetInterestFilterFlags(i);
+        eyes->SetUnk1b0(true);
+    }
+}
+
+void Character::ClearInterestFilterFlags() {
+    CharEyes *eyes = GetEyes();
+    if (eyes) {
+        eyes->ClearInterestFilterFlags();
     }
 }
 
@@ -198,53 +562,7 @@ void Character::EnableBlinks(bool b1, bool b2) {
         eyes->SetEnableBlinks(b1, b2);
 }
 
-bool Character::SetFocusInterest(CharInterest *interest, int i) {
-    CharEyes *eyes = GetEyes();
-    return eyes ? eyes->SetFocusInterest(interest, i) : false;
-}
-
-void Character::SetInterestFilterFlags(int i) {
-    CharEyes *eyes = GetEyes();
-    if (eyes) {
-        eyes->SetInterestFilterFlags(i);
-        eyes->SetUnk1b0(true);
-    }
-}
-
-void Character::ClearInterestFilterFlags() {
-    CharEyes *eyes = GetEyes();
-    if (eyes) {
-        eyes->ClearInterestFilterFlags();
-    }
-}
-
-void Character::RemovingObject(Hmx::Object *o) {
-    if (o == mDriver) {
-        mDriver = nullptr;
-    }
-    RndDir::RemovingObject(o);
-}
-
 void Character::SetDebugDrawInterestObjects(bool b) { mDebugDrawInterestObjects = b; }
-
-void Character::UpdateSphere() {
-    Sphere s78 = mBounding;
-    Transform tf38;
-    FastInvert(WorldXfm(), tf38);
-    Transform tf68;
-    Multiply(mSphereBase->WorldXfm(), tf38, tf68);
-    FastInvert(tf68, tf68);
-    Multiply(s78, tf68, s78);
-    SetSphere(s78);
-}
-
-bool Character::MakeWorldSphere(Sphere &s, bool b) {
-    if (mSphere.GetRadius()) {
-        Multiply(mSphere, mSphereBase->WorldXfm(), s);
-        return true;
-    } else
-        return false;
-}
 
 CharServoBone *Character::BoneServo() {
     if (mDriver)
@@ -253,22 +571,9 @@ CharServoBone *Character::BoneServo() {
         return nullptr;
 }
 
-void Character::AddedObject(Hmx::Object *o) {
-    if (dynamic_cast<CharPollable *>(o)) {
-        CharDriver *driver = dynamic_cast<CharDriver *>(o);
-        if (driver) {
-            if (streq(driver->Name(), "main.drv")) {
-                mDriver = driver;
-            }
-        }
-    }
-}
-
-CharEyes *Character::GetEyes() { return Find<CharEyes>("CharEyes.eyes", false); }
-
 DataNode Character::OnCopyBoundingSphere(DataArray *da) {
     Character *c = da->Obj<Character>(2);
     if (c)
         CopyBoundingSphere(c);
-    return DataNode(0);
+    return 0;
 }
