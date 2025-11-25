@@ -81,6 +81,12 @@ public:
     void SetEnableBlinks(bool, bool);
     bool SetFocusInterest(CharInterest *, int);
     void ToggleInterestsDebugOverlay();
+    void ClearAllInterestObjects();
+    void AddInterestObject(CharInterest *);
+    int NumInterests() const { return mInterests.size(); }
+    CharInterest *GetInterest(int idx) {
+        return idx >= mInterests.size() ? 0 : mInterests[idx].mInterest;
+    }
 
 protected:
     CharEyes();

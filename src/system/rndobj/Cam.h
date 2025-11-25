@@ -1,6 +1,7 @@
 #pragma once
 #include "math/Mtx.h"
 #include "math/Sphere.h"
+#include "math/Utl.h"
 #include "math/Vec.h"
 #include "obj/Data.h"
 #include "obj/Object.h"
@@ -45,7 +46,18 @@ public:
         mScreenRect = rect;
         UpdateLocal();
     }
-    float CalcScreenHeight(const Sphere &);
+    float CalcScreenHeight(const Sphere &s) {
+        float r = mLocalProjectXfm.m.z.y * s.GetRadius();
+        float dist = CalcDistTo(s.center);
+        if (dist != 0) {
+            return fabsf(r / dist) * mScreenRect.h;
+        } else {
+            return kHugeFloat;
+        }
+    }
+    float CalcDistTo(const Vector3 &v) {
+        return Dot(v, WorldXfm().m.y) + mInvWorldXfm.v.y;
+    }
 
     NEW_OBJ(RndCam);
     OBJ_MEM_OVERLOAD(0x1B);

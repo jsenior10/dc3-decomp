@@ -8,6 +8,7 @@
 #include "char/CharUtl.h"
 #include "char/Waypoint.h"
 #include "math/Mtx.h"
+#include "math/Utl.h"
 #include "obj/Dir.h"
 #include "obj/Object.h"
 #include "os/Debug.h"
@@ -16,6 +17,7 @@
 #include "rndobj/Cam.h"
 #include "rndobj/Dir.h"
 #include "rndobj/Draw.h"
+#include "rndobj/Env.h"
 #include "rndobj/Group.h"
 #include "rndobj/Mesh.h"
 #include "rndobj/Trans.h"
@@ -23,6 +25,7 @@
 #include "utl/BinStream.h"
 #include "utl/Loader.h"
 #include "utl/MemMgr.h"
+#include "utl/Std.h"
 #include "utl/Symbol.h"
 
 Character *Character::sCurrent;
@@ -181,8 +184,33 @@ void Character::PreLoad(BinStream &bs) {
     d.PushRev(this);
 }
 
-BinStreamRev &operator>>(BinStreamRev &, Character::Lod &);
-void OldGroupLoad(DrawPtrVec &, BinStream &);
+void OldGroupLoad(DrawPtrVec &vec, BinStream &bs) {
+    vec.clear();
+    ObjPtr<RndGroup> group(vec.Owner());
+    bs >> group;
+    if (group) {
+        vec.push_back(group);
+    }
+}
+
+BinStreamRev &operator>>(BinStreamRev &d, Character::Lod &lod) {
+    d >> lod.mScreenSize;
+    if (d.rev < 6) {
+        lod.mScreenSize *= (4.0f / 3.0f);
+    }
+    if (gCharMe) {
+        d >> lod.mOpaque;
+    } else if (d.rev < 0x12) {
+        OldGroupLoad(lod.mOpaque, d.stream);
+        if (d.rev > 0xD) {
+            OldGroupLoad(lod.mTranslucent, d.stream);
+        }
+    } else {
+        d >> lod.mOpaque;
+        d >> lod.mTranslucent;
+    }
+    return d;
+}
 
 void Character::PostLoad(BinStream &bs) {
     BinStreamRev d(bs, bs.PopRev(this));
@@ -534,6 +562,9 @@ void Character::ClearInterestFilterFlags() {
     }
 }
 
+#pragma endregion
+#pragma region Character Methods
+
 void Character::Init() { REGISTER_OBJ_FACTORY(Character) }
 
 ShadowBone *Character::AddShadowBone(RndTransformable *trans) {
@@ -576,4 +607,117 @@ DataNode Character::OnCopyBoundingSphere(DataArray *da) {
     if (c)
         CopyBoundingSphere(c);
     return 0;
+}
+
+void Character::MergeDraws(const Character *c) {
+    MILO_ASSERT(c, 0x57D);
+    int numLods = Max<int>(c->mLods.size(), mLods.size());
+    mLods.resize(numLods);
+    for (int i = 0; i < c->mLods.size(); i++) {
+        mLods[i].mOpaque.merge(c->mLods[i].mOpaque);
+        mLods[i].mTranslucent.merge(c->mLods[i].mTranslucent);
+    }
+    mTranslucent.merge(c->mTranslucent);
+    mShadow.merge(c->mShadow);
+    mShowableProps.merge(c->mShowableProps);
+}
+
+void Character::SetInterestObjects(
+    const ObjPtrList<CharInterest> &interests, ObjectDir *dir
+) {
+    CharEyes *eyes = GetEyes();
+    if (eyes) {
+        eyes->ClearAllInterestObjects();
+        FOREACH (it, interests) {
+            if (ValidateInterest(*it, dir ? dir : (*it)->Dir()))
+                eyes->AddInterestObject(*it);
+        }
+    }
+}
+
+bool Character::SetFocusInterest(Symbol s, int iii) {
+    CharEyes *eyes = GetEyes();
+    if (eyes) {
+        CharInterest *interest = nullptr;
+        for (int i = 0; i < eyes->NumInterests(); i++) {
+            if (s == eyes->GetInterest(i)->Name()) {
+                interest = eyes->GetInterest(i);
+                break;
+            }
+        }
+        if (!s.Null() && !interest) {
+            MILO_NOTIFY("Couldn't find interest named %s to force on %s", s.Str(), Name());
+        }
+        return SetFocusInterest(interest, iii);
+    } else
+        return false;
+}
+
+void Character::SetSphereBase(RndTransformable *trans) {
+    if (!trans)
+        trans = this;
+    Sphere s18;
+    MakeWorldSphere(s18, false);
+    MultiplyTranspose(s18.center, trans->WorldXfm(), s18.center);
+    SetSphere(s18);
+    mSphereBase = trans;
+}
+
+void Character::CopyBoundingSphere(Character *c) {
+    MILO_ASSERT(c, 0x46D);
+    SetSphere(c->mSphere);
+    mBounding = c->mBounding;
+    SetSphereBase(c->mSphereBase);
+}
+
+void Character::RemoveFromDraws(DrawPtrVec &vec) {
+    FOREACH (it, vec) {
+        RndDrawable *cur = *it;
+        VectorRemove(mDraws, cur);
+    }
+}
+
+DataNode Character::OnPlayClip(DataArray *msg) {
+    if (mDriver) {
+        int playint = msg->Size() > 3 ? msg->Int(3) : 4;
+        MILO_ASSERT(msg->Size()<=4, 0x5CF);
+        return mDriver->Play(msg->Node(2), playint, -1, kHugeFloat, 0) != nullptr;
+    } else
+        return 0;
+}
+
+DataNode Character::OnGetCurrentInterests(DataArray *da) {
+    int size = 0;
+    CharEyes *eyes = GetEyes();
+    if (eyes)
+        size = eyes->NumInterests();
+    DataArrayPtr ptr;
+    ptr->Resize(size + 1);
+    ptr->Node(0) = Symbol();
+    for (int i = 0; i < size; i++) {
+        ptr->Node(i + 1) = Symbol(eyes->GetInterest(i)->Name());
+    }
+    return ptr;
+}
+
+void Character::DrawLodOrShadow(int lod, DrawMode drawMode) {
+    mLastLod = Clamp<int>(0, mLods.size() - 1, lod);
+    if (drawMode == 4) {
+        if (!mShadow.empty()) {
+            mShadow.Draw();
+            return;
+        }
+        DrawShowing();
+    } else {
+        if (drawMode & 1) {
+            RndEnvironTracker tracker(mEnv, &WorldXfm().v);
+            DrawShowing();
+        }
+        if (!(drawMode & 2))
+            return;
+        if (drawMode == 2) {
+            RndEnvironTracker tracker(unk2a0, unk2b4);
+            return;
+        }
+    }
 }

@@ -42,6 +42,12 @@ public:
         DrawPtrVec mTranslucent; // 0x20
     };
 
+    enum DrawMode {
+        kCharDrawNone,
+        kCharDrawOpaque,
+        kCharDrawTranslucent,
+        kCharDrawAll
+    };
     enum PollState {
         kCharCreated = 0,
         kCharSyncObject = 1,
@@ -105,6 +111,7 @@ public:
     void ForceBlink();
     void CopyBoundingSphere(Character *);
     CharServoBone *BoneServo();
+    void DrawLodOrShadow(int, DrawMode);
     void SetTeleport(bool t) { mTeleported = t; }
     CharDriver *Driver() const { return mDriver; }
     bool DebugDrawInterestObjects() const { return mDebugDrawInterestObjects; }
@@ -160,7 +167,7 @@ protected:
         to force the character to look at it." */
     Symbol mInterestToForce; // 0x29c
     ObjPtr<RndEnviron> unk2a0;
-    int unk2b4;
+    Vector3 *unk2b4;
     /** "Props to show and hide for cut scenes" */
     DrawPtrVec mShowableProps; // 0x2b8
     bool mDebugDrawInterestObjects; // 0x2d4

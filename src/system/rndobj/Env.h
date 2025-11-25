@@ -33,6 +33,13 @@ public:
     OBJ_MEM_OVERLOAD(0x1B);
     NEW_OBJ(RndEnviron)
     static void Init() { REGISTER_OBJ_FACTORY(RndEnviron) }
+    static RndEnviron *Current() { return sCurrent; }
+    static Vector3 *CurrentPos() {
+        if (sCurrentPosSet)
+            return &sCurrentPos;
+        else
+            return nullptr;
+    }
 
     void SetUseApproxLocal(bool b) { mUseApprox_Local = b; }
     void SetUseApproxGlobal(bool b) { mUseApprox_Global = b; }
@@ -97,10 +104,37 @@ protected:
 
 class RndEnvironTracker {
 public:
-    RndEnvironTracker(RndEnviron *, const Vector3 *);
-    ~RndEnvironTracker();
+    RndEnvironTracker(RndEnviron *env, const Vector3 *v3)
+        : mOld(RndEnviron::Current()), mOldPosSet(RndEnviron::CurrentPos()) {
+        if (mOldPosSet) {
+            mOldPos = *RndEnviron::CurrentPos();
+        } else {
+            mOldPos.Zero();
+        }
+        if (env) {
+            if (env != RndEnviron::Current() || !VecEqual(v3, RndEnviron::CurrentPos())) {
+                env->Select(v3);
+            }
+        }
+    }
+    ~RndEnvironTracker() {
+        Vector3 *vptr = mOldPosSet ? &mOldPos : nullptr;
+        if (mOld) {
+            if (mOld != RndEnviron::Current()
+                || !VecEqual(vptr, RndEnviron::CurrentPos())) {
+                mOld->Select(vptr);
+            }
+        }
+    }
 
 protected:
+    bool VecEqual(const Vector3 *v1, const Vector3 *v2) const {
+        if (v1 && v2) {
+            return *v1 == *v2;
+        } else
+            return v1 == v2;
+    }
+
     RndEnviron *mOld; // 0x0
     Vector3 mOldPos; // 0x4
     bool mOldPosSet; // 0x10
