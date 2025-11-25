@@ -44,17 +44,19 @@ public:
     virtual void Load(BinStream &);
     /** "Calculates the bounding sphere for the object." */
     virtual void UpdateSphere() { mSphere.Zero(); }
-    virtual float GetDistanceToPlane(const Plane &, Vector3 &) { return 0.0f; }
-    virtual bool MakeWorldSphere(Sphere &, bool) { return 0; }
+    virtual float GetDistanceToPlane(const Plane &, Vector3 &) { return 0; }
+    virtual bool MakeWorldSphere(Sphere &s, bool) { return false; }
     /** Get the current camera to use. */
     virtual RndCam *CamOverride() { return 0; }
     virtual void Mats(std::list<class RndMat *> &, bool) {}
     virtual void Draw();
     virtual void DrawShowing() {}
-    virtual void DrawShadow(const Transform &, float) {}
+    virtual void DrawShadow(const Transform &light, float shadowPlane) {}
     /** Get the list of this Object's children that are drawable. */
     virtual void ListDrawChildren(std::list<RndDrawable *> &) {}
-    virtual RndDrawable *CollideShowing(const Segment &, float &, Plane &) { return 0; }
+    virtual RndDrawable *CollideShowing(const Segment &s, float &dist, Plane &plane) {
+        return nullptr;
+    }
     virtual int CollidePlane(const Plane &);
     virtual void CollideList(const Segment &, std::list<Collision> &);
     virtual void DrawPreClear() {}

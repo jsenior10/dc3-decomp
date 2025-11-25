@@ -1,6 +1,7 @@
 #pragma once
 #include "math/Mtx.h"
 #include "math/Sphere.h"
+#include "math/Utl.h"
 #include "math/Vec.h"
 #include "obj/Data.h"
 #include "utl/BinStream.h"
@@ -10,6 +11,12 @@
 class Segment {
 public:
     Segment() {}
+
+    Segment &operator=(const Segment &s) {
+        memcpy(this, &s, sizeof(*this));
+        return *this;
+    }
+
     Vector3 start;
     Vector3 end;
 };
@@ -123,7 +130,17 @@ void Multiply(const Box &, float, Box &);
 bool Intersect(const Transform &, const Hmx::Polygon &, const BSPNode *);
 void MultiplyEq(BSPNode *, const Transform &);
 void Multiply(const Plane &, const Transform &, Plane &);
-void Multiply(const Sphere &, const Transform &, Sphere &);
+
+inline void Multiply(const Sphere &s, const Transform &t, Sphere &out) {
+    Multiply(s.center, t, out.center);
+    float len = Max(LengthSquared(t.m.z), LengthSquared(t.m.y), LengthSquared(t.m.x));
+    len = std::sqrt(len);
+    if (NearlyOne(len)) {
+        len = 1;
+    }
+    out.radius = s.radius * len;
+}
+
 bool Intersect(const Segment &, const Sphere &);
 bool Intersect(const Vector3 &, const BSPNode *);
 

@@ -295,12 +295,49 @@ public:
 
 bool operator>(const Sphere &, const Frustum &);
 
-void Normalize(const Hmx::Matrix3 &, Hmx::Matrix3 &);
+inline void Normalize(const Hmx::Matrix3 &in, Hmx::Matrix3 &out) {
+    Normalize(in.y, out.y);
+    out.x.Set(
+        out.y.y * in.z.z - out.y.z * in.z.y,
+        out.y.z * in.z.x - out.y.x * in.z.z,
+        out.y.x * in.z.y - out.y.y * in.z.x
+    );
+    Normalize(out.x, out.x);
+    out.z.Set(
+        out.y.z * out.x.y - out.y.y * out.x.z,
+        out.y.x * out.x.z - out.y.z * out.x.x,
+        out.y.y * out.x.x - out.y.x * out.x.y
+    );
+}
+
+void FastInvert(const Hmx::Matrix3 &, Hmx::Matrix3 &);
+
 void Multiply(const Hmx::Matrix3 &, const Hmx::Matrix3 &, Hmx::Matrix3 &);
 void Multiply(const Transform &, const Transform &, Transform &);
 void Multiply(const Vector3 &, const Transform &, Vector3 &);
-void MultiplyTranspose(const Vector3 &, const Transform &, Vector3 &);
-void Multiply(const Vector3 &, const Transform &, Vector3 &);
+
+inline void MultiplyTranspose(const Vector3 &v, const Transform &t, Vector3 &out) {
+    Subtract(v, t.v, out);
+    out.Set(Dot(out, t.m.x), Dot(out, t.m.y), Dot(out, t.m.z));
+}
+
+inline void Multiply(const Vector3 &v, const Transform &t, Vector3 &out) {
+    if (&t.v != &out) {
+        out.Set(
+            t.m.x.x * v.x + t.m.y.x * v.y + t.m.z.x * v.z,
+            t.m.x.y * v.x + t.m.y.y * v.y + t.m.z.y * v.z,
+            t.m.x.z * v.x + t.m.y.z * v.y + t.m.z.z * v.z
+        );
+        Add(out, t.v, out);
+    } else {
+        out.Set(
+            t.m.x.x * v.x + t.m.y.x * v.y + t.m.z.x * v.z + t.v.x,
+            t.m.x.y * v.x + t.m.y.y * v.y + t.m.z.y * v.z + t.v.y,
+            t.m.x.z * v.x + t.m.y.z * v.y + t.m.z.z * v.z + t.v.z
+        );
+    }
+}
+
 void Multiply(const Plane &, const Transform &, Plane &);
 
 void Multiply(const Hmx::Quat &q1, const Hmx::Quat &q2, Hmx::Quat &qres);
@@ -322,9 +359,21 @@ inline void Multiply(const Vector3 &v, const Hmx::Matrix3 &m, Vector3 &vout) {
 }
 
 void Invert(const Transform &, Transform &);
-void FastInvert(const Transform &, Transform &);
+
+inline void FastInvert(const Transform &in, Transform &out) {
+    Vector3 inV;
+    Negate(in.v, inV);
+    FastInvert(in.m, out.m);
+    out.v.Set(
+        out.m.x.x * inV.x + out.m.y.x * inV.y + out.m.z.x * inV.z,
+        out.m.x.y * inV.x + out.m.y.y * inV.y + out.m.z.y * inV.z,
+        out.m.x.z * inV.x + out.m.y.z * inV.y + out.m.z.z * inV.z
+    );
+}
+
 void Invert(const Hmx::Matrix4 &, Hmx::Matrix4 &);
 void Transpose(const Hmx::Matrix4 &, Hmx::Matrix4 &);
+
 inline void Multiply(const Frustum &fin, const Transform &tf, Frustum &fout) {
     Multiply(fin.front, tf, fout.front);
     Multiply(fin.back, tf, fout.back);
@@ -333,7 +382,28 @@ inline void Multiply(const Frustum &fin, const Transform &tf, Frustum &fout) {
     Multiply(fin.top, tf, fout.top);
     Multiply(fin.bottom, tf, fout.bottom);
 }
-void Transpose(const Transform &, Transform &);
+
+inline void Transpose(const Transform &in, Transform &out) {
+    out.m.Set(
+        in.m.x.x,
+        in.m.y.x,
+        in.m.z.x,
+        in.m.x.y,
+        in.m.y.y,
+        in.m.z.y,
+        in.m.x.z,
+        in.m.y.z,
+        in.m.z.z
+    );
+    Vector3 inV;
+    Negate(in.v, inV);
+    out.v.Set(
+        out.m.x.x * inV.x + out.m.y.x * inV.y + out.m.z.x * inV.z,
+        out.m.x.y * inV.x + out.m.y.y * inV.y + out.m.z.y * inV.z,
+        out.m.x.z * inV.x + out.m.y.z * inV.y + out.m.z.z * inV.z
+    );
+}
+
 void Invert(const Hmx::Matrix3 &, Hmx::Matrix3 &);
 void FastInvert(const Hmx::Matrix3 &, Hmx::Matrix3 &);
 void Multiply(const Hmx::Matrix3 &, const Hmx::Matrix3 &, Hmx::Matrix3 &);

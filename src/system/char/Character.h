@@ -162,7 +162,7 @@ protected:
     /** "if true, is frozen in place, no polling happens" */
     bool mFrozen; // 0x290
     int unk294;
-    bool mTeleported;
+    bool mTeleported; // 0x298
     /** "select an interest object here and select 'force_interest' below
         to force the character to look at it." */
     Symbol mInterestToForce; // 0x29c

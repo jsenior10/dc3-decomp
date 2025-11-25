@@ -7,6 +7,7 @@
 #include "char/CharacterTest.h"
 #include "char/CharUtl.h"
 #include "char/Waypoint.h"
+#include "math/Geo.h"
 #include "math/Mtx.h"
 #include "math/Utl.h"
 #include "obj/Dir.h"
@@ -343,6 +344,32 @@ void Character::DrawShadow(const Transform &xfm, float f2) {
         // more...
         mShadow.Draw();
     }
+}
+
+RndDrawable *Character::CollideShowing(const Segment &s, float &fl, Plane &pl) {
+    Vector3 v70;
+    RndDrawable *ret = nullptr;
+    Segment mySegment = s;
+    fl = 1;
+    if (mLastLod >= 0 && mLastLod < mLods.size()) {
+        RndDrawable *lodShowing = mLods[mLastLod].mOpaque.CollideShowing(s, v70.x, pl);
+        if (lodShowing) {
+            if (IsProxy()) {
+                fl = v70.x;
+                return this;
+            }
+            float oldX = v70.x;
+            Interp(mySegment.start, mySegment.end, v70.x, v70);
+            fl *= oldX;
+            ret = lodShowing;
+        }
+    }
+    RndDrawable *rndDirShowing = RndDir::CollideShowing(mySegment, v70.x, pl);
+    if (rndDirShowing) {
+        fl *= v70.x;
+        ret = rndDirShowing;
+    }
+    return ret;
 }
 
 #pragma endregion
