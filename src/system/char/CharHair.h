@@ -48,6 +48,7 @@ public:
         RndTransformable *Root() { return mRoot; }
         Hmx::Matrix3 &RootMat() { return mRootMat; }
         ObjVector<Point> &Points() { return mPoints; }
+        int NumPoints() const { return mPoints.size(); }
         Point &PointAt(int i) { return mPoints[i]; }
 
     private:
@@ -89,9 +90,14 @@ public:
     NEW_OBJ(CharHair)
 
     void FreezePoseRaw();
+    void Hookup(ObjPtrList<CharCollide> &);
 
 protected:
     CharHair();
+
+    struct SortCollides {
+        bool operator()(const CharCollide *, const CharCollide *) const;
+    };
 
     void Hookup();
     void SetCloth(bool);

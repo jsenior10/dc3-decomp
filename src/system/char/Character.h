@@ -115,6 +115,10 @@ public:
     void SetTeleport(bool t) { mTeleported = t; }
     CharDriver *Driver() const { return mDriver; }
     bool DebugDrawInterestObjects() const { return mDebugDrawInterestObjects; }
+    bool Synced() const { return mPollState == kCharSyncObject; }
+    bool Teleported() const { return mTeleported; }
+    // rename once you have a better idea of what this does
+    bool LODCheck() const { return mForceLod > 0; }
 
     static void Init();
     static Character *Current() { return sCurrent; }

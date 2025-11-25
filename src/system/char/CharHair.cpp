@@ -1,6 +1,8 @@
 #include "char/CharHair.h"
+#include "char/CharCollide.h"
 #include "char/Character.h"
 #include "obj/Object.h"
+#include "obj/Task.h"
 #include "rndobj/Poll.h"
 #include "utl/BinStream.h"
 #include "world/Dir.h"
@@ -125,6 +127,36 @@ void CharHair::SetName(const char *name, ObjectDir *dir) {
     mUsePostProc = dynamic_cast<Character *>(dir) || dynamic_cast<WorldDir *>(dir);
 }
 
+void CharHair::Poll() {
+    Character *cur = Character::Current();
+    if (cur) {
+        if (cur->Synced()) {
+            Hookup();
+        }
+        if (cur->Teleported()) {
+            mReset = 1;
+        }
+        if (cur->LODCheck()) {
+            DoReset(0);
+            return;
+        }
+    }
+    if (mReset > 0) {
+        DoReset(mReset);
+    }
+    if (TheTaskMgr.DeltaSeconds() != 0) {
+        SimulateLoops(1, GetFPS());
+    } else {
+        SimulateZeroTime();
+    }
+}
+
+void CharHair::Enter() {
+    mReset = 1;
+    RndPollable::Enter();
+    Hookup();
+}
+
 void CharHair::PollDeps(
     std::list<Hmx::Object *> &changedBy, std::list<Hmx::Object *> &change
 ) {
@@ -132,4 +164,37 @@ void CharHair::PollDeps(
         changedBy.push_back(mStrands[i].Root());
         change.push_back(mStrands[i].Root());
     }
+}
+
+void CharHair::SetCloth(bool b) {
+    for (int i = 0; i < mStrands.size(); i++) {
+        Strand &strand = mStrands[i];
+        int mod = Mod(i + 1, mStrands.size());
+        Strand &modidx = mStrands[mod];
+        for (int j = 0; j < strand.NumPoints(); j++) {
+            Point &point = strand.PointAt(j);
+            point.sideLength = b && j < modidx.NumPoints()
+                ? Distance(point.pos, modidx.PointAt(j).pos)
+                : -1.0f;
+        }
+    }
+}
+
+void CharHair::Hookup() {
+    if (!mManagedHookup) {
+        ObjPtrList<CharCollide> list(this);
+        for (ObjDirItr<CharCollide> it(Dir(), true); it != nullptr; ++it) {
+            list.push_back(it);
+        }
+        list.sort(SortCollides());
+        Hookup(list);
+    }
+}
+
+void CharHair::FreezePose() {
+    bool oldSim = mSimulate;
+    Hookup();
+    SimulateLoops(200, 60);
+    mSimulate = oldSim;
+    FreezePoseRaw();
 }
