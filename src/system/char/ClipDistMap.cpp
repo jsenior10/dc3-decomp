@@ -110,3 +110,29 @@ int ClipDistMap::CalcWidth() {
 
     return 1;
 }
+
+int ClipDistMap::CalcHeight() {
+    float clipBStartBeat = mClipB->StartBeat();
+    float dVar4 = 1.0 / mSamplesPerBeat;
+    float fVar5 = Mod(clipBStartBeat, dVar4);
+    float dVar2 = clipBStartBeat - fVar5;
+    mBStart = clipBStartBeat - fVar5;
+
+    if (mBStart < mClipB->StartBeat()) {
+        mBStart += dVar4;
+    }
+    fVar5 = mClipB->EndBeat();
+    dVar2 = fVar5;
+    fVar5 = Mod(fVar5, dVar4);
+    clipBStartBeat = (dVar2 - fVar5) + dVar4;
+    dVar2 -= fVar5;
+
+    if (clipBStartBeat <= mClipB->EndBeat()) {
+        dVar2 = clipBStartBeat;
+    }
+
+    dVar2 = floor(((dVar2 - mBStart) * mSamplesPerBeat) + 0.5);
+    uint uVar1 = dVar2;
+
+    return (((uVar1 != 0) - (uVar1 >> 0x1f) & uVar1)) + 1;
+}
