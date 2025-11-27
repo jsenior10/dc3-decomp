@@ -51,19 +51,34 @@ ClipDistMap::ClipDistMap(
 
 bool ClipDistMap::BeatAligned(int i1, int i2) {
     int l1;
-    int l2;
+    int l2 = mBeatAlignPeriod;
 
-    if (mBeatAlignPeriod == 0) {
+    if (l2 == 0) {
         l1 = 0;
     } else {
-        l2 = i1 - i2;
-        l1 = l2 - (l2 / mBeatAlignPeriod) * mBeatAlignPeriod;
+        l1 = (i1 - i2) % l2;
         if (l1 < 0) {
-            mBeatAlignPeriod += l1;
+            l1 += l2;
         }
     }
 
-    return mBeatAlignOffset - l1 == 0;
+    return l1 == mBeatAlignOffset;
+}
+
+bool ClipDistMap::FindBestNode(float f1, float f2, float f3, ClipDistMap::Node &node) {
+    int temp1;
+    int temp2;
+    if (f2 < f3) {
+        temp1 = (f3 - mAStart) * mSamplesPerBeat;
+        temp2 = (f2 - mAStart) * mSamplesPerBeat;
+        temp2 = 0xffffffff - (temp2 >> 0x1f) & temp2;
+        if (temp1 <= mDists.mWidth) {
+            mDists.mWidth = temp1;
+        }
+        for (int i = 0; i < mDists.mWidth; i++) {
+        }
+    }
+    return false;
 }
 
 void ClipDistMap::FindNodes(float f1, float f2, float f3) {
@@ -80,4 +95,18 @@ void ClipDistMap::FindNodes(float f1, float f2, float f3) {
     }
 
     FindBestNodeRecurse(f1, f4, (f4 * 2.0 - f5), mAStart, mAEnd);
+}
+
+int ClipDistMap::CalcWidth() {
+    float *distData = mDists.mData;
+    float f1 = (1.0 / mSamplesPerBeat);
+    float f2 = Mod(*distData, f1);
+    float f3 = *distData - f2;
+    mAStart = f3;
+
+    if (f3 < *distData) {
+        mAStart = f3 + f1;
+    }
+
+    return 1;
 }
