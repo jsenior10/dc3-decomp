@@ -98,41 +98,60 @@ void ClipDistMap::FindNodes(float f1, float f2, float f3) {
 }
 
 int ClipDistMap::CalcWidth() {
-    float *distData = mDists.mData;
-    float f1 = (1.0 / mSamplesPerBeat);
-    float f2 = Mod(*distData, f1);
-    float f3 = *distData - f2;
-    mAStart = f3;
+    float clipAStartBeat = mClipA->StartBeat();
+    float samplesDiv = (1.0 / mSamplesPerBeat);
+    float clipASamplesMod = Mod(clipAStartBeat, 1.0 / mSamplesPerBeat);
+    float f1 = clipAStartBeat - clipASamplesMod;
+    mAStart = f1;
 
-    if (f3 < *distData) {
-        mAStart = f3 + f1;
+    if (f1 < mClipA->StartBeat()) {
+        mAStart = f1 + samplesDiv;
     }
 
-    return 1;
+    // f2 = mClipA->EndBeat();
+    f1 = mClipA->EndBeat();
+    clipASamplesMod = Mod(f1, samplesDiv);
+    mAEnd = f1 - clipASamplesMod;
+    clipASamplesMod = (f1 - clipASamplesMod) + samplesDiv;
+
+    if (clipASamplesMod <= mClipA->EndBeat()) {
+        mAEnd = clipASamplesMod;
+    }
+
+    f1 = floor(mAEnd - mAStart * mSamplesPerBeat + 0.5);
+
+    uint val = f1;
+    // val = (val != 0) - (val >> 0x1f) & val;
+
+    // mAEnd = val / mSamplesPerBeat + mAStart;
+
+    return (((val != 0) - (val >> 0x1f) & val)) + 1;
 }
 
 int ClipDistMap::CalcHeight() {
     float clipBStartBeat = mClipB->StartBeat();
-    float dVar4 = 1.0 / mSamplesPerBeat;
-    float fVar5 = Mod(clipBStartBeat, dVar4);
-    float dVar2 = clipBStartBeat - fVar5;
-    mBStart = clipBStartBeat - fVar5;
+    float samplesDiv = 1.0 / mSamplesPerBeat;
+    float clipBSamplesMod = Mod(clipBStartBeat, samplesDiv);
+    float f1 = clipBStartBeat - clipBSamplesMod;
+    mBStart = f1;
 
     if (mBStart < mClipB->StartBeat()) {
-        mBStart += dVar4;
+        mBStart += samplesDiv;
     }
-    fVar5 = mClipB->EndBeat();
-    dVar2 = fVar5;
-    fVar5 = Mod(fVar5, dVar4);
-    clipBStartBeat = (dVar2 - fVar5) + dVar4;
-    dVar2 -= fVar5;
+    // fVar5 = mClipB->EndBeat();
+    f1 = mClipB->EndBeat();
+    clipBSamplesMod = Mod(mClipB->EndBeat(), samplesDiv);
+    clipBStartBeat = (f1 - clipBSamplesMod) + samplesDiv;
+    f1 -= clipBSamplesMod;
 
     if (clipBStartBeat <= mClipB->EndBeat()) {
-        dVar2 = clipBStartBeat;
+        f1 = clipBStartBeat;
     }
 
-    dVar2 = floor(((dVar2 - mBStart) * mSamplesPerBeat) + 0.5);
-    uint uVar1 = dVar2;
+    f1 = floor(((f1 - mBStart) * mSamplesPerBeat) + 0.5); // how can i make this use
+                                                          // fmadds instead of 2 separate
+                                                          // insts?
+    uint val = f1;
 
-    return (((uVar1 != 0) - (uVar1 >> 0x1f) & uVar1)) + 1;
+    return (((val != 0) - (val >> 0x1f) & val)) + 1;
 }
