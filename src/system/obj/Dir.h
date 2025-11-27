@@ -139,6 +139,14 @@ BinStream &operator>>(BinStream &bs, ObjDirPtr<T> &ptr) {
     return bs;
 }
 
+/**
+ * @brief: A directory of Objects.
+ * Original _objects description:
+ * "An ObjectDir keeps track of a set of Objects.
+ * It can subdir or proxy in other ObjectDirs.
+ * To rename subdir or proxy files search for remap_objectdirs in
+ * system/run/config/objects.dta"
+ */
 class ObjectDir : public virtual Hmx::Object {
     friend class Hmx::Object;
     friend bool PropSyncSubDirs(
@@ -159,13 +167,9 @@ public:
         Transform mXfm;
     };
 
+    /** An Entry of an Object in an ObjectDir, noted by the Object's name and pointer. */
     struct Entry {
         Entry() : name(0), obj(0) {}
-        Entry &operator=(const Entry &entry) {
-            name = entry.name;
-            obj = entry.obj;
-            return *this;
-        }
         bool operator==(const Entry &e) const { return name == e.name; }
         bool operator!=(const Entry &e) const { return name != e.name; }
         operator const char *() const { return name; }
@@ -188,11 +192,29 @@ protected:
     StringTable mStringTable; // 0x28
     FilePath mProxyFile; // 0x3c
     bool mProxyOverride; // 0x44
+    /** "How is this Proxy inlined?  Note that when you change this,
+        you must resave everything subdiring this file for it to take effect"
+        kInlineNever: "Never inline this, this is the default value"
+        kInlineCached: "Inline it during cached saves"
+        kInlineAlways: "Always inline it, even during non cached saves" */
     InlineDirType mInlineProxyType; // 0x48
     DirLoader *mLoader; // 0x4c
+    /** "Subdirectories of objects" */
     std::vector<ObjDirPtr<ObjectDir> > mSubDirs; // 0x50
+    /** Is this dir a subdir? */
     bool mIsSubDir; // 0x5c
+    /** "How is this inlined as a subdir?  Note that when you change this,
+        you must resave everything subdiring this file for it to take effect"
+        kInlineNever: "Always share this subdir,
+            good for textures and other things you want to share"
+        kInlineCached: "Never share this, each dir subdiring this will get its own copy,
+            good for layering proxy or venue files for authoring"
+        kInlineAlways: "Always inline it, even during non cached saves,
+            this is only used for AO computations"
+        kInlineCachedShared: "Always inline it, but share it like a normal subdir
+            if another one has been loaded" */
     InlineDirType mInlineSubDirType; // 0x60
+    /** "where this came from". aka: the path this ObjectDir was loaded from. */
     const char *mPathName; // 0x64
     FilePath mStoredFile; // 0x68
     std::vector<InlinedDir> mInlinedDirs; // 0x70
@@ -224,18 +246,23 @@ public:
     virtual void PreLoad(BinStream &);
     virtual void PostLoad(BinStream &);
     // ObjectDir
-    virtual void SetProxyFile(const FilePath &, bool);
+    virtual void SetProxyFile(const FilePath &file, bool override);
     virtual const FilePath &ProxyFile() { return mProxyFile; }
-    virtual void SetSubDir(bool);
+    /** Set whether or not this ObjectDir is a subdir. */
+    virtual void SetSubDir(bool isSubdir);
     virtual DataArrayPtr GetExposedProperties() { return nullptr; }
     virtual void SyncObjects();
     virtual void ResetEditorState();
     virtual InlineDirType InlineSubDirType();
 
+    /** Find an Object of type T in this ObjectDir.
+     * @param [in] name The name of the Object to search for.
+     * @param [in] fail If true, fail the system if no Object was found.
+     */
     template <class T>
-    T *Find(const char *name, bool parentDirs) {
+    T *Find(const char *name, bool fail = true) {
         T *castedObj = dynamic_cast<T *>(FindObject(name, false, true));
-        if (!castedObj && parentDirs) {
+        if (!castedObj && fail) {
             MILO_FAIL(
                 kNotObjectMsg, name, PathName(this) ? PathName(this) : "**no file**"
             );
@@ -243,6 +270,10 @@ public:
         return castedObj;
     }
 
+    /** Create a new Object of type T in this ObjectDir.
+     * @param [in] name The name of the Object to create.
+     * @returns The newly created and named Object.
+     */
     template <class T>
     T *New(const char *name) {
         T *obj = Hmx::Object::New<T>();
@@ -269,8 +300,18 @@ public:
 
     void ResetViewports();
     void SetInlineProxyType(InlineDirType);
-    void Reserve(int, int);
-    Hmx::Object *FindObject(const char *, bool, bool);
+    /** Allocate space in this ObjectDir's hashtable and stringtable respectively.
+     * @param [in] hashSize The desired size of the hash table.
+     * @param [in] stringSize The desired size of the string table.
+     */
+    void Reserve(int hashSize, int stringSize);
+    /** Find an Object inside this ObjectDir.
+     * @param [in] name The name of the Object to search for.
+     * @param [in] parentDirs If true, search the parent ObjectDirs of this ObjectDir.
+     * @param [in] subDirs If true, search through this ObjectDir's subdirs.
+     * @returns The object, or NULL if it wasn't found.
+     */
+    Hmx::Object *FindObject(const char *name, bool parentDirs, bool subDirs);
     bool InlineProxy(BinStream &);
     bool HasDirPtrs() const;
     void TransferLoaderState(ObjectDir *);
@@ -278,17 +319,30 @@ public:
     bool HasSubDir(ObjectDir *);
     void SaveProxy(BinStream &);
     FilePath GetSubDirPath(const FilePath &, const BinStream &);
+    /** Delete all Objects in this ObjectDir. */
     void DeleteObjects();
-    void RemoveSubDir(const ObjDirPtr<ObjectDir> &);
+    /** Delete all subdirs of this ObjectDir. */
     void DeleteSubDirs();
     ObjectDir *FindContainingDir(const char *);
-    void AppendSubDir(const ObjDirPtr<ObjectDir> &);
+
+    /** Append a subdir to this ObjectDir's list of subdirs.
+     * @param [in] subdir The subdir to append.
+     */
+    void AppendSubDir(const ObjDirPtr<ObjectDir> &subdir);
+    /** Remove a subdir from this ObjectDir's list of subdirs.
+     * @param [in] subdir The subdir to remove.
+     */
+    void RemoveSubDir(const ObjDirPtr<ObjectDir> &subdir);
+
     void SetCurViewport(ViewportId id, Hmx::Object *o);
     void SetSubDirFlag(bool flag);
-    void SetPathName(const char *);
+    /** Set this ObjectDir's path name.
+     * @param [in] path The path name to set.
+     */
+    void SetPathName(const char *path);
 
     static ObjectDir *Main() { return sMainDir; }
-    static void PreInit(int, int);
+    static void PreInit(int hashSize, int stringSize);
     static void Init();
     static void Terminate();
     // key: Symbol child, Symbol parent
@@ -299,22 +353,41 @@ public:
     OBJ_MEM_OVERLOAD(0x111);
 
 protected:
+    /** Routine to perform when an Object has been added to this ObjectDir. */
     virtual void AddedObject(Hmx::Object *);
+    /** Routine to perform when an Object is being removed from this ObjectDir. */
     virtual void RemovingObject(Hmx::Object *);
     virtual void OldLoadProxies(BinStream &, int);
 
+    /** Can we save our subdirs? */
     bool SaveSubdirs();
     bool ShouldSaveProxy(BinStream &);
-    Entry *FindEntry(const char *, bool);
+    /** Find the Object Entry in this ObjectDir.
+     * @param [in] name The name of the Object to search for.
+     * @param [in] add If true, add a new Entry if one was not found.
+     * @returns The Object Entry.
+     */
+    Entry *FindEntry(const char *name, bool add);
     void SaveInlined(const FilePath &, bool, InlineDirType);
     void PreLoadInlined(const FilePath &, bool, InlineDirType);
-    void LoadSubDir(int, const FilePath &, BinStream &, bool);
-    void AddedSubDir(ObjDirPtr<ObjectDir> &);
-    void RemovingSubDir(ObjDirPtr<ObjectDir> &);
+    void LoadSubDir(int idx, const FilePath &, BinStream &, bool);
+    /** Routine to perform when a subdir has been added to the ObjectDir's subdir list. */
+    void AddedSubDir(ObjDirPtr<ObjectDir> &subdir);
+    /** Routine to perform when a subdir is being removed from the ObjectDir's subdir
+     * list. */
+    void RemovingSubDir(ObjDirPtr<ObjectDir> &subdir);
     void Iterate(DataArray *, bool);
     ObjDirPtr<ObjectDir> PostLoadInlined();
 
-    DataNode OnFind(DataArray *);
+    /** Handler to search for an Object in this ObjectDir.
+     * @param [in] arr The supplied DataArray.
+     * Expected DataArray contents:
+     *     Node 2: The name of the object to search for, in string form.
+     *     Node 3: if true, fail if the desired object was not found.
+     * @returns A DataNode housing the found Object.
+     * Example usage: {$this find "your_object.ext" TRUE}
+     */
+    DataNode OnFind(DataArray *arr);
 };
 
 extern const char *kNotObjectMsg;

@@ -365,13 +365,13 @@ void ObjectDir::Load(BinStream &bs) {
 
 void ObjectDir::PostSave(BinStream &) { SyncObjects(); }
 
-void ObjectDir::SetProxyFile(const FilePath &fp, bool b) {
+void ObjectDir::SetProxyFile(const FilePath &file, bool override) {
     if (!IsProxy()) {
         MILO_NOTIFY("Can't set proxy file if own dir");
     } else {
-        mProxyFile = fp;
-        mProxyOverride = b;
-        if (!b) {
+        mProxyFile = file;
+        mProxyOverride = override;
+        if (!override) {
             DeleteObjects();
             DeleteSubDirs();
             if (!mProxyFile.empty()) {
@@ -384,8 +384,8 @@ void ObjectDir::SetProxyFile(const FilePath &fp, bool b) {
     }
 }
 
-void ObjectDir::SetSubDir(bool b1) {
-    if (b1) {
+void ObjectDir::SetSubDir(bool isSubdir) {
+    if (isSubdir) {
         mIsSubDir = true;
         SetName(nullptr, nullptr);
         SetTypeDef(nullptr);
@@ -753,8 +753,8 @@ ObjDirPtr<ObjectDir> ObjectDir::PostLoadInlined() {
 }
 
 ObjectDir::Entry *ObjectDir::FindEntry(const char *name, bool add) {
-    if (name == 0 || *name == '\0')
-        return 0;
+    if (name == nullptr || *name == '\0')
+        return nullptr;
     else {
         Entry *entry = mHashTable.Find(name);
         if (!entry && add) {
@@ -766,11 +766,11 @@ ObjectDir::Entry *ObjectDir::FindEntry(const char *name, bool add) {
     }
 }
 
-Hmx::Object *ObjectDir::FindObject(const char *name, bool parentDirs, bool b3) {
+Hmx::Object *ObjectDir::FindObject(const char *name, bool parentDirs, bool subDirs) {
     Entry *entry = FindEntry(name, false);
     if (entry && entry->obj)
         return entry->obj;
-    if (b3) {
+    if (subDirs) {
         for (int i = 0; i < mSubDirs.size(); i++) {
             if (mSubDirs[i]) {
                 Hmx::Object *found = mSubDirs[i]->FindObject(name, false, true);
