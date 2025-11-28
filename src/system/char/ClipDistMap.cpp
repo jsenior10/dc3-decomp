@@ -2,7 +2,11 @@
 #include "char/CharClip.h"
 #include "char/CharUtl.h"
 #include "macros.h"
+#include "math/Color.h"
 #include "math/Utl.h"
+#include "rnddx9/Rnd_Xbox.h"
+#include "rndobj/Rnd.h"
+#include "utl/MemMgr.h"
 
 void FindWeights(
     std::vector<RndTransformable *> &transes,
@@ -108,7 +112,6 @@ int ClipDistMap::CalcWidth() {
         mAStart = f1 + samplesDiv;
     }
 
-    // f2 = mClipA->EndBeat();
     f1 = mClipA->EndBeat();
     clipASamplesMod = Mod(f1, samplesDiv);
     mAEnd = f1 - clipASamplesMod;
@@ -121,9 +124,6 @@ int ClipDistMap::CalcWidth() {
     f1 = floor(mAEnd - mAStart * mSamplesPerBeat + 0.5);
 
     uint val = f1;
-    // val = (val != 0) - (val >> 0x1f) & val;
-
-    // mAEnd = val / mSamplesPerBeat + mAStart;
 
     return (((val != 0) - (val >> 0x1f) & val)) + 1;
 }
@@ -154,4 +154,13 @@ int ClipDistMap::CalcHeight() {
     uint val = f1;
 
     return (((val != 0) - (val >> 0x1f) & val)) + 1;
+}
+
+void ClipDistMap::Array2d::Resize(int w, int h) {
+    delete this->mData;
+
+    this->mWidth = w;
+    this->mHeight = h;
+
+    this->mData = (float *)new uint[h * w];
 }
