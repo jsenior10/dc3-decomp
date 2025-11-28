@@ -1,12 +1,7 @@
 #include "char/ClipDistMap.h"
 #include "char/CharClip.h"
-#include "char/CharUtl.h"
 #include "macros.h"
-#include "math/Color.h"
 #include "math/Utl.h"
-#include "rnddx9/Rnd_Xbox.h"
-#include "rndobj/Rnd.h"
-#include "utl/MemMgr.h"
 
 void FindWeights(
     std::vector<RndTransformable *> &transes,
@@ -99,6 +94,7 @@ void ClipDistMap::FindNodes(float f1, float f2, float f3) {
     }
 
     FindBestNodeRecurse(f1, f4, (f4 * 2.0 - f5), mAStart, mAEnd);
+    // finish later
 }
 
 int ClipDistMap::CalcWidth() {
@@ -158,9 +154,7 @@ int ClipDistMap::CalcHeight() {
 
 void ClipDistMap::Array2d::Resize(int w, int h) {
     delete this->mData;
-
     this->mWidth = w;
     this->mHeight = h;
-
     this->mData = (float *)new uint[h * w];
 }
