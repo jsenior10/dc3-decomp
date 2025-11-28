@@ -14,6 +14,8 @@ public:
     virtual void DoPost();
     virtual const char *GetProcType() { return "SoftParticleBuffer"; }
 
+    NEW_OBJ(RndSoftParticleBuffer)
+
 private:
     void FreeData();
 

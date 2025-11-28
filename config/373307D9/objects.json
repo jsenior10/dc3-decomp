@@ -717,7 +717,7 @@
             "system/rndobj/PropKeys.cpp": "NonMatching",
             "system/rndobj/Ribbon.cpp": "NonMatching",
             "system/rndobj/Rnd.cpp": "NonMatching",
-            "system/rndobj/Rnd_NG.cpp": "MISSING",
+            "system/rndobj/Rnd_NG.cpp": "NonMatching",
             "system/rndobj/SIVideo.cpp": "NonMatching",
             "system/rndobj/ScreenMask.cpp": "NonMatching",
             "system/rndobj/Set.cpp": "NonMatching",

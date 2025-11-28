@@ -12,6 +12,8 @@ public:
     virtual bool Prep(RndMesh *, RndMat *) const;
     virtual bool Shell(int, RndMesh *, RndMat *) const;
 
+    NEW_OBJ(NgFur)
+
 protected:
     NgFur();
 };
