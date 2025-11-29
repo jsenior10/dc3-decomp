@@ -1,7 +1,9 @@
 #include "rndobj/SoftParticles.h"
+#include "Rnd_NG.h"
 #include "obj/Object.h"
 #include "rndobj/BaseMaterial.h"
 #include "rndobj/Draw.h"
+#include "rndobj/SoftParticleBuffer.h"
 
 RndSoftParticles::RndSoftParticles()
     : mParticles(this), mBlend(BaseMaterial::kBlendSrcAlphaAdd) {}
@@ -45,10 +47,17 @@ BEGIN_LOADS(RndSoftParticles)
     bs >> (int &)mBlend;
 END_LOADS
 
+void RndSoftParticles::DrawShowing() {
+    RndSoftParticleBuffer *buffer = TheNgRnd.ParticleBuffer();
+    if (buffer) {
+        FOREACH (it, mParticles) {
+            buffer->Queue(*it, mBlend);
+        }
+    }
+}
+
 void RndSoftParticles::ListDrawChildren(std::list<RndDrawable *> &draws) {
-    for (ObjPtrList<RndDrawable>::iterator it = mParticles.begin();
-         it != mParticles.end();
-         ++it) {
+    FOREACH (it, mParticles) {
         draws.push_back(*it);
     }
 }

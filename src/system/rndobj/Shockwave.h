@@ -23,6 +23,8 @@ public:
     NEW_OBJ(RndShockwave)
     static void Init() { REGISTER_OBJ_FACTORY(RndShockwave) }
 
+    void PrepareShader(float);
+
 private:
     static RndShockwave *sSelected;
 

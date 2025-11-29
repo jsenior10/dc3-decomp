@@ -76,3 +76,5 @@ protected:
     std::vector<RndPointTest> unk20c; // 0x20c
     bool unk218; // 0x218
 };
+
+extern NgRnd &TheNgRnd;
