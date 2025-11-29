@@ -77,7 +77,7 @@ inline bool PropSync(short &s, DataNode &node, DataArray *prop, int i, PropOp op
 }
 
 inline bool PropSync(bool &b, DataNode &node, DataArray *prop, int i, PropOp op) {
-    MILO_ASSERT(i == prop->Size() && op <= kPropInsert, 0x40);
+    MILO_ASSERT(i == prop->Size() && op <= kPropInsert, 0x4E);
     if (op == kPropGet)
         node = b;
     else

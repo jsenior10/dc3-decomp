@@ -186,7 +186,12 @@ public:
     BinStreamRev(BinStream &bs, int revs)
         : rev(getHmxRev(revs)), altRev(getAltRev(revs)), stream(bs) {}
 
-    BinStreamRev &operator>>(bool &);
+    BinStreamRev &operator>>(bool &b) {
+        unsigned char uc;
+        *this >> uc;
+        b = (uc != 0);
+        return *this;
+    }
 
     void PushRev(Hmx::Object *obj) { stream.PushRev(packRevs(altRev, rev), obj); }
 

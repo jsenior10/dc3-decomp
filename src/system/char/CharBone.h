@@ -34,6 +34,7 @@ public:
     int RotationContext() const { return mRotationContext; }
     CharBone *Target() const { return mTarget; }
     RndTransformable *BoneTrans() { return mTrans; }
+    void SetTrans(RndTransformable *t) { mTrans = t; }
     void SetTarget(CharBone *b) { mTarget = b; }
     void SetPositionContext(int c) { mPositionContext = c; }
     void SetRotationContext(int c) { mRotationContext = c; }

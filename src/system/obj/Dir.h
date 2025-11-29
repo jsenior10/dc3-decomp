@@ -428,8 +428,11 @@ private:
         }
     }
 
+    /** The current ObjectDir::Entry in the iterator. */
     ObjectDir::Entry *mEntry; // 0x0
+    /** The current object in the iterator. */
     T *mObj; // 0x4
+    /** All the subdirs we need to iterate through. */
     std::list<ObjectDir *> mSubDirs; // 0x8
 
 public:

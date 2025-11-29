@@ -10,12 +10,7 @@
 BaseMaterial *gDefaultMat;
 
 namespace {
-    bool IsMat(BaseMaterial *mat) {
-        if (mat && mat->ClassName() == "Mat") {
-            return true;
-        }
-        return false;
-    }
+    bool IsMat(BaseMaterial *mat) { return mat && mat->ClassName() == "Mat"; }
 }
 
 void BaseMaterial::SetDefaultMat(BaseMaterial *mat) {
@@ -99,7 +94,7 @@ bool BaseMaterial::PropValDifferent(Symbol s, BaseMaterial *base) {
         const DataNode *node = Property(s, true);
         MILO_ASSERT(node, 0x13C);
         DataNode var(*node);
-        DataNode othervar(*Property(s, true));
+        DataNode othervar(*base->Property(s, true));
         if (s == "shader_combos") {
             return var > othervar;
         } else {
@@ -152,10 +147,10 @@ BEGIN_COPYS(BaseMaterial)
     CREATE_COPY(BaseMaterial)
     BEGIN_COPYING_MEMBERS
         if (ty == kCopyFromMax) {
-            if (mDiffuseTex != c->mDiffuseTex) {
+            if (!mDiffuseTex != !c->mDiffuseTex) {
                 COPY_MEMBER(mDiffuseTex)
             }
-            if (mDiffuseTex2 != c->mDiffuseTex2) {
+            if (!mDiffuseTex2 != !c->mDiffuseTex2) {
                 COPY_MEMBER(mDiffuseTex2)
             }
         } else {

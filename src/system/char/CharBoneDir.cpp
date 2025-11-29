@@ -1,5 +1,6 @@
 #include "char/CharBoneDir.h"
 #include "char/CharBone.h"
+#include "char/CharUtl.h"
 #include "obj/Data.h"
 #include "obj/DataFunc.h"
 #include "obj/Dir.h"
@@ -72,6 +73,32 @@ BinStream &operator>>(BinStream &bs, CharBoneDir::Recenter &r) {
     bs >> r.mAverage;
     bs >> r.mSlide;
     return bs;
+}
+
+void CharBoneDir::PreLoad(BinStream &bs) {
+    LOAD_REVS(bs)
+    ASSERT_REVS(4, 0)
+    ObjectDir::PreLoad(bs);
+    d.PushRev(this);
+}
+
+void CharBoneDir::PostLoad(BinStream &bs) {
+    BinStreamRev d(bs, bs.PopRev(this));
+    ObjectDir::PostLoad(bs);
+    if (d.rev < 2) {
+        bool b;
+        d >> b;
+    } else {
+        d >> mMoveContext;
+    }
+    if (d.rev < 3) {
+        bool b;
+        d >> b;
+    }
+    d >> mRecenter;
+    if (d.rev > 3) {
+        d >> mBakeOutFacing;
+    }
 }
 
 void CharBoneDir::ListBones(std::list<CharBones::Bone> &bones, int mask, bool b3) {
@@ -227,13 +254,68 @@ void CharBoneDir::SyncFilter() {
     mFilterNames.clear();
     std::list<CharBones::Bone> bones;
     ListBones(bones, mFilterContext, true);
-    for (std::list<CharBones::Bone>::iterator it = bones.begin(); it != bones.end();
-         ++it) {
+    FOREACH (it, bones) {
         mFilterNames.push_back(it->name);
     }
     mFilterNames.sort();
-    for (std::list<String>::iterator it = mFilterNames.begin(); it != mFilterNames.end();
-         ++it) {
+    FOREACH (it, mFilterNames) {
         MILO_LOG("%s\n", *it);
+    }
+}
+
+void CharBoneDir::MergeCharacter(const FilePath &fp) {
+    ObjectDir *dir = DirLoader::LoadObjects(FilePath(fp.c_str()), 0, 0);
+    if (!dir)
+        MILO_NOTIFY("Could not load %s", fp);
+    else {
+        std::list<RndTransformable *> tlist;
+        for (ObjDirItr<RndTransformable> it(dir, false); it != nullptr; ++it) {
+            if (dir != (Hmx::Object *)it) {
+                if (CharUtlIsAnimatable(it)) {
+                    if (strncmp(it->Name(), "bone_", 5) == 0
+                        || strncmp(it->Name(), "exo_", 4) == 0) {
+                        tlist.push_back(it);
+                    }
+                }
+            }
+        }
+        std::list<RndTransformable *> tlist60;
+        while (!tlist.empty()) {
+            RndTransformable *backTrans = tlist.back();
+            RndTransformable *charTrans = CharUtlFindBoneTrans(backTrans->Name(), this);
+            if (!charTrans) {
+                backTrans->SetName(backTrans->Name(), this);
+                charTrans = backTrans;
+            } else {
+                charTrans->Copy(backTrans, Hmx::Object::kCopyDeep);
+                backTrans->ReplaceRefs(charTrans);
+            }
+            tlist60.push_back(charTrans);
+            char buf[256];
+            strcpy(buf, MakeString("%s.cb", FileGetBase(charTrans->Name())));
+            CharBone *bone = CharUtlFindBone(buf, this);
+            if (!bone)
+                bone = New<CharBone>(buf);
+            bone->SetTrans(charTrans);
+            tlist.pop_back();
+        }
+
+        while (!tlist60.empty()) {
+            RndTransformable *parent = tlist60.back()->TransParent();
+            if (parent) {
+                if (strncmp(parent->Name(), "bone_", 5) != 0) {
+                    if (strncmp(parent->Name(), "exo_", 4) != 0)
+                        goto pop;
+                }
+                if (parent->Dir() != this) {
+                    parent->SetName(parent->Name(), this);
+                    parent->SetTransParent(nullptr, false);
+                }
+            }
+        pop:
+            tlist60.pop_back();
+        }
+
+        delete dir;
     }
 }
