@@ -109,6 +109,14 @@ inline bool ClampEq(T &value, const T &min, const T &max) {
     return false;
 }
 
+// float specialization for the use of fsel instructions
+template <>
+inline bool ClampEq(float &value, const float &min, const float &max) {
+    float tmp = value;
+    value = Min(Max(min, value), max);
+    return tmp != value;
+}
+
 template <class T>
 inline bool MinEq(T &x, const T &y) {
     if (y < x) {
@@ -116,6 +124,14 @@ inline bool MinEq(T &x, const T &y) {
         return true;
     }
     return false;
+}
+
+// float specialization for the use of fsel instructions
+template <>
+inline bool MinEq(float &x, const float &y) {
+    float tmp = x;
+    x = Min(x, y);
+    return tmp != x;
 }
 
 template <class T>

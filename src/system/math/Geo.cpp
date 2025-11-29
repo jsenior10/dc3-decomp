@@ -114,8 +114,7 @@ bool Box::Clamp(Vector3 &v) {
 
 void Normalize(const Plane &in, Plane &out) {
     float mult = 0;
-    const Vector3 *v = reinterpret_cast<const Vector3 *>(&in);
-    float len = Length(*v);
+    float len = std::sqrt(in.a * in.a + in.b * in.b + in.c * in.c);
     if (len != 0) {
         mult = 1 / len;
     }
@@ -124,8 +123,8 @@ void Normalize(const Plane &in, Plane &out) {
 
 void ClosestPoint(const Vector3 &v1, const Vector3 &v2, const Vector3 &v3, Vector3 *vout) {
     Vector3 diff31, diff21;
-    Subtract(v3, v1, diff31);
     Subtract(v2, v1, diff21);
+    Subtract(v3, v1, diff31);
     float f5 = Dot(diff31, diff21);
     if (f5 <= 0) {
         *vout = v1;
@@ -134,18 +133,16 @@ void ClosestPoint(const Vector3 &v1, const Vector3 &v2, const Vector3 &v3, Vecto
         if (f5 > dot21) {
             *vout = v2;
         } else {
-            f5 /= dot21;
-            diff21 *= f5;
+            Scale(diff21, f5 / dot21, diff21);
             Add(v1, diff21, *vout);
         }
     }
 }
 
 void Plane::Set(const Vector3 &v1, const Vector3 &v2, const Vector3 &v3) {
-    Vector3 diff31, diff21;
-    Subtract(v3, v1, diff31);
+    Vector3 diff21, diff31, cross;
     Subtract(v2, v1, diff21);
-    Vector3 cross;
+    Subtract(v3, v1, diff31);
     Cross(diff21, diff31, cross);
     Normalize(cross, cross);
     a = cross.x;

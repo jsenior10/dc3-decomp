@@ -3,7 +3,6 @@
 #include "math/Vec.h"
 #include "math/Trig.h"
 #include "utl/BinStream.h"
-#include "utl/TextStream.h"
 
 class Transform;
 
@@ -231,8 +230,6 @@ public:
     static const Transform &IDXfm() { return sID; }
 };
 
-TextStream &operator<<(TextStream &, const Transform &);
-
 inline BinStream &operator<<(BinStream &bs, const Transform &tf) {
     bs << tf.m << tf.v;
     return bs;
@@ -263,7 +260,12 @@ public:
         d = f4;
     }
     float Dot(const Vector3 &vec) const { return a * vec.x + b * vec.y + c * vec.z + d; }
-    Vector3 On() const;
+    Vector3 On() const {
+        Vector3 ret;
+        float scalar = -d / (a * a + b * b + c * c);
+        ret.Set(a * scalar, b * scalar, c * scalar);
+        return ret;
+    }
 
     float a, b, c, d;
 };
@@ -293,6 +295,14 @@ public:
     class Plane bottom; // offset 0x50, size 0x10
 };
 
+// defined in mtx.cpp
+float Det(const Hmx::Matrix3 &m);
+void Invert(const Hmx::Matrix3 &, Hmx::Matrix3 &);
+void FastInvert(const Hmx::Matrix3 &, Hmx::Matrix3 &);
+void Multiply(const Transform &, const Transform &, Transform &);
+float Det(const Hmx::Matrix4 &);
+void Invert(const Hmx::Matrix4 &, Hmx::Matrix4 &);
+
 bool operator>(const Sphere &, const Frustum &);
 
 inline void Normalize(const Hmx::Matrix3 &in, Hmx::Matrix3 &out) {
@@ -310,10 +320,7 @@ inline void Normalize(const Hmx::Matrix3 &in, Hmx::Matrix3 &out) {
     );
 }
 
-void FastInvert(const Hmx::Matrix3 &, Hmx::Matrix3 &);
-
 void Multiply(const Hmx::Matrix3 &, const Hmx::Matrix3 &, Hmx::Matrix3 &);
-void Multiply(const Transform &, const Transform &, Transform &);
 void Multiply(const Vector3 &, const Transform &, Vector3 &);
 
 inline void MultiplyTranspose(const Vector3 &v, const Transform &t, Vector3 &out) {
@@ -340,15 +347,14 @@ inline void Multiply(const Vector3 &v, const Transform &t, Vector3 &out) {
 
 void Multiply(const Plane &, const Transform &, Plane &);
 
-void Multiply(const Hmx::Quat &q1, const Hmx::Quat &q2, Hmx::Quat &qres);
-// {
-//     qres.Set(
-//         -(q1.z * q2.y - (q1.y * q2.z + q1.w * q2.x + q1.x * q2.w)),
-//         -(q1.x * q2.z - (q1.z * q2.x + q1.w * q2.y + q1.y * q2.w)),
-//         -(q1.y * q2.x - (q1.x * q2.y + q1.w * q2.z + q1.z * q2.w)),
-//         -(q1.z * q2.z - -(q1.y * q2.y - (q1.w * q2.w - q1.x * q2.x)))
-//     );
-// }
+inline void Multiply(const Hmx::Quat &q1, const Hmx::Quat &q2, Hmx::Quat &qres) {
+    qres.Set(
+        -(q1.z * q2.y - (q1.y * q2.z + q1.w * q2.x + q1.x * q2.w)),
+        -(q1.x * q2.z - (q1.z * q2.x + q1.w * q2.y + q1.y * q2.w)),
+        -(q1.y * q2.x - (q1.x * q2.y + q1.w * q2.z + q1.z * q2.w)),
+        -(q1.z * q2.z - -(q1.y * q2.y - (q1.w * q2.w - q1.x * q2.x)))
+    );
+}
 
 inline void Multiply(const Vector3 &v, const Hmx::Matrix3 &m, Vector3 &vout) {
     vout.Set(
@@ -358,7 +364,16 @@ inline void Multiply(const Vector3 &v, const Hmx::Matrix3 &m, Vector3 &vout) {
     );
 }
 
-void Invert(const Transform &, Transform &);
+inline void Invert(const Transform &in, Transform &out) {
+    Vector3 inV;
+    Negate(in.v, inV);
+    Invert(in.m, out.m);
+    out.v.Set(
+        out.m.x.x * inV.x + out.m.y.x * inV.y + out.m.z.x * inV.z,
+        out.m.x.y * inV.x + out.m.y.y * inV.y + out.m.z.y * inV.z,
+        out.m.x.z * inV.x + out.m.y.z * inV.y + out.m.z.z * inV.z
+    );
+}
 
 inline void FastInvert(const Transform &in, Transform &out) {
     Vector3 inV;
@@ -371,7 +386,6 @@ inline void FastInvert(const Transform &in, Transform &out) {
     );
 }
 
-void Invert(const Hmx::Matrix4 &, Hmx::Matrix4 &);
 void Transpose(const Hmx::Matrix4 &, Hmx::Matrix4 &);
 
 inline void Multiply(const Frustum &fin, const Transform &tf, Frustum &fout) {
@@ -404,10 +418,6 @@ inline void Transpose(const Transform &in, Transform &out) {
     );
 }
 
-void Invert(const Hmx::Matrix3 &, Hmx::Matrix3 &);
-void FastInvert(const Hmx::Matrix3 &, Hmx::Matrix3 &);
-void Multiply(const Hmx::Matrix3 &, const Hmx::Matrix3 &, Hmx::Matrix3 &);
-
 inline void MultiplyInverse(const Transform &t1, const Transform &t2, Transform &tres) {
     Hmx::Matrix3 m50;
     Invert(t2.m, m50);
@@ -417,42 +427,30 @@ inline void MultiplyInverse(const Transform &t1, const Transform &t2, Transform 
     Multiply(diff, m50, tres.v);
 }
 
-void Normalize(const Hmx::Quat &, Hmx::Quat &);
-void NormalizeTo(const Hmx::Quat &, Hmx::Quat &);
+inline void Negate(const Hmx::Quat &in, Hmx::Quat &out) {
+    out.Set(-in.x, -in.y, -in.z, in.w);
+}
 
-void Scale(const Hmx::Matrix3 &mtx, const Vector3 &vec, Hmx::Matrix3 &res);
+inline void NormalizeTo(const Hmx::Quat &qin, Hmx::Quat &qout) {
+    if (qin * qout < 0) {
+        qout.x = -qout.x;
+        qout.y = -qout.y;
+        qout.z = -qout.z;
+        qout.w = -qout.w;
+    }
+}
 
-// void Scale(const Hmx::Matrix3 &mtx, const Vector3 &vec, Hmx::Matrix3 &res) {
-//     Scale(mtx.x, vec.x, res.x);
-//     Scale(mtx.y, vec.y, res.y);
-//     Scale(mtx.z, vec.z, res.z);
-// }
-
-// // void Scale(Matrix3 *param_1,Vector3 *param_2,Matrix3 *param_3)
-
-// // {
-
-// //   (param_3->x).x = (param_1->x).x * param_2->x;
-// //   (param_3->x).z = (param_1->x).z * param_2->z;
-// //   (param_3->x).y = (param_1->x).y * param_2->y;
-
-// //   (param_3->y).x = (param_1->y).x * param_2->x;
-// //   (param_3->y).y = (param_1->y).y * param_2->y;
-// //   (param_3->y).z = (param_1->y).z * param_2->z;
-
-// //   (param_3->z).x = (param_1->z).x * param_2->x;
-// //   (param_3->z).y = (param_1->z).y * param_2->y;
-// //   (param_3->z).z = (param_1->z).z * param_2->z;
-// //   return;
-// // }
+inline void Scale(const Hmx::Matrix3 &mtx, const Vector3 &vec, Hmx::Matrix3 &res) {
+    Scale(mtx.x, vec, res.x);
+    Scale(mtx.y, vec, res.y);
+    Scale(mtx.z, vec, res.z);
+}
 
 inline void Scale(const Vector3 &vec, const Hmx::Matrix3 &mtx, Hmx::Matrix3 &res) {
     Scale(mtx.x, vec.x, res.x);
     Scale(mtx.y, vec.y, res.y);
     Scale(mtx.z, vec.z, res.z);
 }
-
-float Det(const Hmx::Matrix3 &m);
 
 // is the sphere in front of or on the plane?
 inline bool operator>=(const Sphere &s, const Plane &p) {

@@ -6,9 +6,11 @@
 #include "obj/DataFunc.h"
 #include "obj/Object.h"
 #include "os/Debug.h"
+#include "os/Endian.h"
 #include "os/FileCache.h"
 #include "os/Platform.h"
 #include "os/System.h"
+#include "rndobj/Bitmap.h"
 #include "rndobj/Cam.h"
 #include "rndobj/Dir.h"
 #include "rndobj/Draw.h"
@@ -311,13 +313,22 @@ bool SortPolls(const RndPollable *p1, const RndPollable *p2) {
 }
 
 bool LeftHanded(const Hmx::Matrix3 &m) {
-    float det = m.z.x * (m.x.y * m.y.z - m.x.z * m.y.y)
-        + m.z.y * (m.x.z * m.y.x - m.x.x * m.y.z)
-        + m.z.z * (m.x.x * m.y.y - m.x.y * m.y.x);
+    Vector3 cross;
+    Cross(m.x, m.y, cross);
+    float det = Dot(m.z, cross);
     return det < 0;
 }
 
-float AngleBetween(const Hmx::Quat &, const Hmx::Quat &);
+float AngleBetween(const Hmx::Quat &q1, const Hmx::Quat &q2) {
+    Hmx::Quat qtmp;
+    Negate(q1, qtmp);
+    Multiply(q2, qtmp, qtmp);
+    if (qtmp.w > 1.0f) {
+        return 0;
+    } else {
+        return acosf(qtmp.w) * 2.0f;
+    }
+}
 
 bool BadUV(Vector2 &v) {
     if (fabsf(v.x) > 1000.0f || fabsf(v.y) > 1000.0f) {
@@ -654,19 +665,22 @@ void TransformKeys(RndTransAnim *tanim, const Transform &tf) {
     Scale(tf.m.y, 1.0f / v48.y, m3c.y);
     Scale(tf.m.z, 1.0f / v48.z, m3c.z);
     Hmx::Quat q58(m3c);
-    for (Keys<Vector3, Vector3>::iterator it = tanim->TransKeys().begin();
-         it != tanim->TransKeys().end();
-         ++it) {
+    FOREACH (it, tanim->TransKeys()) {
         Multiply(it->value, tf, it->value);
     }
-    for (Keys<Vector3, Vector3>::iterator it = tanim->ScaleKeys().begin();
-         it != tanim->ScaleKeys().end();
-         ++it) {
+    FOREACH (it, tanim->ScaleKeys()) {
         Scale(it->value, v48.x, it->value);
     }
-    for (Keys<Hmx::Quat, Hmx::Quat>::iterator it = tanim->RotKeys().begin();
-         it != tanim->RotKeys().end();
-         ++it) {
+    FOREACH (it, tanim->RotKeys()) {
         Multiply(q58, it->value, it->value);
+    }
+}
+
+void EndianSwapBitmap(RndBitmap &bmap) {
+    for (int i = 0; i < bmap.Height(); i++) {
+        u8 *curRow = bmap.Pixels() + bmap.RowBytes() * i - 4;
+        for (int j = 0; j < bmap.Width(); j++) {
+            // EndianSwap()
+        }
     }
 }

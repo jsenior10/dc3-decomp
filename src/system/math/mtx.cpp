@@ -10,7 +10,7 @@ Transform Transform::sID(Hmx::Matrix3::ID(), Vector3(0, 0, 0));
 
 float Det(const Hmx::Matrix3 &m) {
     Vector3 cross;
-    Cross(m.y, m.z, cross);
+    Cross(m.z, m.y, cross);
     float det = Dot(m.x, cross);
     if (det != 0) {
         det = 1.0f / det;
