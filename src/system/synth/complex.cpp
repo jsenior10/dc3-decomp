@@ -26,7 +26,7 @@ complex csqrt(complex cplx) {
         result.x = sqrt(hypotenuse);
 
     if (result.x < 0.0)
-        result.y = -result.x;
+        result.y = -dVar4;
 
     return result;
 }
