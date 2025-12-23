@@ -1,4 +1,6 @@
 #pragma once
+#include "utl/DebugGraph.h"
+#include "MoveMgr.h"
 #include "gesture/BaseSkeleton.h"
 #include "gesture/Skeleton.h"
 #include "math/Vec.h"
@@ -9,9 +11,21 @@
 
 class RhythmDetector : public RndPollable, public SkeletonCallback {
 public:
-    struct Frame {};
+    struct Frame {
+        float unk0; // 0x0 time created?
+        std::vector<MoveChoiceSet> mJointVelocities; // 0x4
+    };
 
-    struct RecordData {};
+    struct RecordData {
+        float unkbec; // 0xbec
+        float unkbf0; // 0xbf0
+        float unkbf4; // 0xbf4
+        float unkbf8; // 0xbf8
+        float unkbfc; // 0xbfc
+        float unkc00; // 0xc00
+        bool unkc04; // 0xc04
+        std::vector<Frame> frames; // 0xc08
+    };
 
     // Hmx::Object
     virtual ~RhythmDetector();
@@ -29,7 +43,7 @@ public:
     // SkeletonCallback
     virtual void Clear() {}
     virtual void Update(const struct SkeletonUpdateData &) {}
-    virtual void PostUpdate(const struct SkeletonUpdateData *);
+    //virtual void PostUpdate(const struct SkeletonUpdateData *);
     virtual void Draw(const BaseSkeleton &, class SkeletonViz &) {}
 
     OBJ_MEM_OVERLOAD(0x14)
@@ -45,9 +59,53 @@ public:
     void AddFullDebugGraphs();
     void RemoveDebugGraphs();
     void ClearData();
+    RecordData const &GetRecord(float, float, bool, Symbol, TextStream *);
 
 protected:
     RhythmDetector();
+    virtual void PostUpdate(const struct SkeletonUpdateData *);
+
+    bool unkc; // 0xc
+    char mRecording; // 0xd
+    int unk10; // 0x10 skeletonID?
+    std::list<Frame> unk14; // 0x14
+    int unk18; // 0x18
+    std::vector<Vector3> unk20; // 0x20
+    std::vector<Frame> unk2c; // 0x2C
+    std::vector<Frame> unk38; // 0x38
+    float unk44; // 0x44
+    float unk48; // 0x48 mGroove?
+    float unk4c; // 0x4c mFreshness?
+    int unk50; // 0x50 mBeats?
+    float unk54; // 0x54
+    float unk58; // 0x58
+    float unk5c; // 0x5c
+    float unk60; // 0x60
+    float unk68; // 0x68
+    float unksomething;
+    DebugGraph *mDebugGraphA; // 0x6c
+    DebugGraph *mDebugGraphB; // 0x70
+    DebugGraph *mDebugGraphC; // 0x74
+    DebugGraph *mDebugGraphD; // 0x78
+    DebugGraph *mDebugGraphE; // 0x7c
+    double *unk80; // 0x80
+    //float unk80[256];
+    std::vector<float> unka80; // 0xa80
+    //double *unka80; // 0xa80
+    //float unkaa4; // 0xaa4
+    float unkaa8; // 0xaa8
+    std::vector<float> unkaac; // 0xaac
+    std::vector<float> unkab0; // 0xab0
+    std::vector<float> unkab4; // 0xab4
+    RecordData mRecordData; // 0xbec
+    //float unkbec; // 0xbec
+    //float unkbf0; // 0xbf0
+    //float unkbf4; // 0xbf4
+    //float unkbf8; // 0xbf8
+    //float unkbfc; // 0xbfc
+    //float unkc00; // 0xc00
+    //bool unkc04; // 0xc04
+    //std::vector<Frame> unkc08; // 0xc08
 
 private:
     void AddFrame(BaseSkeleton const &);
