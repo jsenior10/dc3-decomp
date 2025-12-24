@@ -1,5 +1,8 @@
 #include "RhythmDetector.h"
 
+#include "gesture/SkeletonUpdate.h"
+#include "ui/UI.h"
+#include "ui/UIPanel.h"
 #include "gesture/GestureMgr.h"
 
 void CameraToScreenUnit(Vector3 &vec, const Skeleton &skel, SkeletonJoint skeljoint) {
@@ -95,7 +98,25 @@ HANDLE_EXPR(is_recording, mRecording)
 HANDLE_SUPERCLASS(RndPollable)
 END_HANDLERS
 
-RhythmDetector::RhythmDetector() : unkc(0), mRecording(0), unk10(-1), unk14(0), unk20(0), unk2c(0), unk38(0), unk44(8.0), unk48(0.0), unk4c(0.0), unk50(2), unk54(1.5), unk58(0.0), unk5c(0.0), unk60(0.0), unk68(0.0), unk80(), unka80(0), mRecordData()  {
+BEGIN_PROPSYNCS(RhythmDetector)
+SYNC_SUPERCLASS(Hmx::Object)
+SYNC_SUPERCLASS(RndPollable)
+SYNC_PROP(rhythm_rating, unk48);
+SYNC_PROP(rhythm_decay, unk4c)
+SYNC_PROP(num_beats_to_cover, unk44)
+SYNC_PROP(beat_fold, unk50)
+SYNC_PROP(tolerance_factor, unk54)
+SYNC_PROP(dir_x, unk58)
+SYNC_PROP(dir_y, unk5c)
+SYNC_PROP(dir_z, unk60)
+END_PROPSYNCS
+
+BEGIN_COPYS(RhythmDetector)
+CREATE_COPY(RndPollable)
+//COPY_SUPERCLASS(RndPollable)
+END_COPYS
+
+RhythmDetector::RhythmDetector() : unkc(0), mRecording(0), unk10(-1), unk14(0), unk20(0), unk2c(0), unk38(0), unk44(8.0), unk48(0.0), unk4c(0.0), unk50(2), unk54(1.5), unk58(0.0), unk5c(0.0), unk60(0.0), unk68(0.0), unk80(), unka80(0) {
 
 }
 
@@ -116,12 +137,12 @@ float RhythmDetector::Freshness() const {
 }
 
 Vector4 RhythmDetector::Data1(int i1) const {
-    Vector4 vec;
-    vec.x = unkaac[i1];
-    vec.y = unkab0[i1];
-    vec.w = 0.0;
-    vec.z = unkab0[i1];
-    return vec;
+    //Vector4 vec;
+    //vec.x = unkaac[i1];
+    //vec.y = unkab0[i1];
+    //vec.w = 0.0;
+    //vec.z = unkab4[i1];
+    return Vector4(unkaac[i1].x, unkaac[i1].y, unkaac[i1].z, 0.0);
 }
 
 Vector4 RhythmDetector::Data2(int i1) const {
@@ -156,18 +177,23 @@ void RhythmDetector::AddFullDebugGraphs() {
 void RhythmDetector::RemoveDebugGraphs() {
     if (mDebugGraphA) {
         delete mDebugGraphA;
+        //mDebugGraphA = 0;
     }
     if (mDebugGraphB) {
         delete mDebugGraphB;
+        mDebugGraphB = 0;
     }
     if (mDebugGraphC) {
         delete mDebugGraphC;
+        //mDebugGraphC = 0;
     }
     if (mDebugGraphD) {
         delete mDebugGraphD;
+        mDebugGraphD = 0;
     }
     if (mDebugGraphE) {
         delete mDebugGraphE;
+        mDebugGraphE = 0;
     }
 }
 
@@ -261,6 +287,15 @@ void SetupFrame(
     if (!pos) {
         MILO_ASSERT(pos, 0x4da);
     }
+    //if ()
+    UIPanel *panel = ObjectDir::Main()->Find<UIPanel>("rhythm_detector_panel", false);
+    std::vector<float> vec = minJointSpeedVector();
+    if (frame.mJointVelocities.size() < 20) {
+        //frame.mJointVelocities.push_back();
+    }
+    else {
+        frame.mJointVelocities.erase(frame.mJointVelocities.begin() + 140);
+    }
 }
 
 RhythmDetector::Frame BlendFrameDataToBeat(RhythmDetector::Frame const &a, RhythmDetector::Frame const &b, float f1) {
@@ -307,4 +342,21 @@ void EraseNewerData(std::vector<RhythmDetector::Frame> &frames, float f1) {
 
 void RhythmDetector::PostUpdate(const struct SkeletonUpdateData *sud) {
 
+}
+
+void RhythmDetector::Enter() {
+    RndPollable::Enter();
+    bool bVar1 = false;
+    bool hasSkelInstance = SkeletonUpdate::HasInstance();
+    bool hasCallback;
+
+    if (hasSkelInstance) {
+        SkeletonUpdateHandle suh = SkeletonUpdate::InstanceHandle();
+        bVar1 = true;
+        hasCallback = suh.HasCallback(this);
+        if (hasCallback) {
+
+        }
+    }
+    hasSkelInstance = false;
 }

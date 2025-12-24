@@ -38,7 +38,7 @@ public:
     virtual void Load(BinStream &);
     // RndPollable
     virtual void Poll();
-    virtual void Enter() { RndPollable::Enter(); }
+    virtual void Enter();
     virtual void Exit() { RndPollable::Exit(); }
     // SkeletonCallback
     virtual void Clear() {}
@@ -81,22 +81,26 @@ protected:
     float unk58; // 0x58
     float unk5c; // 0x5c
     float unk60; // 0x60
+    float unk64; // 0x64
     float unk68; // 0x68
-    float unksomething;
+    //float unksomething;
     DebugGraph *mDebugGraphA; // 0x6c
     DebugGraph *mDebugGraphB; // 0x70
     DebugGraph *mDebugGraphC; // 0x74
     DebugGraph *mDebugGraphD; // 0x78
     DebugGraph *mDebugGraphE; // 0x7c
-    double *unk80; // 0x80
+    float unk80[646]; // 0x80 some big ass buffer maybe who knows
     //float unk80[256];
     std::vector<float> unka80; // 0xa80
     //double *unka80; // 0xa80
-    //float unkaa4; // 0xaa4
+    float unkaa4; // 0xaa4
     float unkaa8; // 0xaa8
-    std::vector<float> unkaac; // 0xaac
-    std::vector<float> unkab0; // 0xab0
-    std::vector<float> unkab4; // 0xab4
+    std::vector<Vector3> unkaac; // 0xaac
+    //std::vector<float> unkab0; // 0xab0
+    //std::vector<float> unkab4; // 0xab4
+    //float unkaac; // 0xaac
+    //float unkab0; // 0xab0
+    //float unkab4; // 0xab4
     RecordData mRecordData; // 0xbec
     //float unkbec; // 0xbec
     //float unkbf0; // 0xbf0
