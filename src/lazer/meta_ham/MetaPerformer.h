@@ -83,7 +83,9 @@ public:
     bool CanUpdateScoreLeaderboards(bool);
     void SetVenuePref(Symbol);
     void StartGameplayTimer();
-    void CalcPrimarySongCharacter(const HamSongMetadata *, Symbol &, Symbol &, Symbol &);
+    void CalcPrimarySongCharacter(
+        const HamSongMetadata *data, Symbol &crew, Symbol &charSym, Symbol &outfit
+    );
     void CalcSecondarySongCharacter(
         const HamSongMetadata *, bool, Symbol, Symbol &, Symbol &, Symbol &
     );
@@ -116,6 +118,8 @@ public:
 
     bool HasPlaylist() const { return mPlaylist; }
     Playlist *GetPlaylist() { return mPlaylist; }
+
+    void SetSkipPracticeWelcome(bool b) { mSkipPracticeWelcome = b; }
 
     static void Init();
     static void SendSpeechDatapoint(DataArray *, float, Symbol);

@@ -282,11 +282,11 @@ void MetaPerformer::GetEraInvalid() {
 }
 
 void MetaPerformer::CalcPrimarySongCharacter(
-    const HamSongMetadata *data, Symbol &s2, Symbol &s3, Symbol &s4
+    const HamSongMetadata *data, Symbol &crew, Symbol &charSym, Symbol &outfit
 ) {
-    s3 = data->Character();
-    s4 = data->Outfit();
-    s2 = GetCrewForCharacter(s3);
+    charSym = data->Character();
+    outfit = data->Outfit();
+    crew = GetCrewForCharacter(charSym);
 }
 
 int MetaPerformer::GetPlaylistIndex() const { return mPlaylistIndex; }

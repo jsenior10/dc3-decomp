@@ -44,6 +44,11 @@ public:
 
 extern DataPointMgr &TheDataPointMgr;
 
+void SendDataPoint(const char *type) {
+    DataPoint point(type);
+    TheDataPointMgr.RecordDataPoint(point);
+}
+
 template <class N1, class V1>
 void SendDataPoint(const char *type, N1 name1, V1 value1) {
     DataPoint point(type);

@@ -3,7 +3,7 @@
 #include "SongRecord.h"
 #include "SongSort.h"
 
-class SongSortMgr : public NavListSortMgr, Hmx::Object {
+class SongSortMgr : public NavListSortMgr {
 public:
     virtual DataNode Handle(DataArray *, bool);
     virtual bool SelectionIs(Symbol);
@@ -41,10 +41,8 @@ protected:
     bool unk8c; // 0x8c
     double *unk90; // 0x90
     std::vector<int> unk94; // 0x94
-    //double *unk98; // 0x98
-    //double *unk9c; // 0x9c
-
-
+    // double *unk98; // 0x98
+    // double *unk9c; // 0x9c
 };
 
 extern SongSortMgr *TheSongSortMgr;

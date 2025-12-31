@@ -114,6 +114,7 @@ VOID XAudioGetSpeakerConfig();
 VOID XGetVideoMode(XVIDEO_MODE *pVideoMode);
 VOID *XMemSet(VOID *dest, INT c, SIZE_T count);
 VOID *XMemAlloc(SIZE_T dwSize, DWORD dwAllocAttributes);
+DWORD XPhysicalSize(LPVOID lpAddress);
 DWORD XUserAwardGamerPicture(
     DWORD dwUserIndex, DWORD dwPictureId, DWORD dwReserved, XOVERLAPPED *pXOverlapped
 );
@@ -157,6 +158,8 @@ DWORD XShowDeviceSelectorUI(
     XOVERLAPPED *pOverlapped
 );
 DWORD XGetGameRegion();
+__declspec(noreturn) DWORD XShowNuiDirtyDiscErrorUI(DWORD dwTrackingID, DWORD dwUserIndex);
+__declspec(noreturn) DWORD XShowDirtyDiscErrorUI(DWORD dwUserIndex);
 
 #ifdef __cplusplus
 }

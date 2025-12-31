@@ -21,11 +21,12 @@ public:
     virtual UIComponent *FocusComponent();
 
     // HamPanel
+    virtual bool ShouldUseLocalNavlist() const { return true; }
     virtual bool HasNavList() const { return mNavList != nullptr; }
 
     NEW_OBJ(HamPanel)
 
-    HamNavList *mNavList;
+    HamNavList *mNavList; // 0x38
 
     HamPanel();
 };

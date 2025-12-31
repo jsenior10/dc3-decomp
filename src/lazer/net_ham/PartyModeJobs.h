@@ -3,11 +3,10 @@
 #include "types.h"
 #include "utl/Str.h"
 
-// likely included in PartyModeMgr instead
 class SongQueueRow {
 public:
     int unk0;
-    int unk4;
+    int mSongID; // 0x4
     String unk8;
     String unk10;
 };
@@ -39,7 +38,7 @@ public:
     SyncPlayerSongsJob(Hmx::Object *callback, const char *onlineID, String &songIDs);
 };
 
-class DeleteSongFromPartySongQueueJob : RCJob {
+class DeleteSongFromPartySongQueueJob : public RCJob {
 public:
     DeleteSongFromPartySongQueueJob(
         Hmx::Object *callback, const char *onlineID, int songID
