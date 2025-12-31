@@ -297,7 +297,3 @@ void NavListSortMgr::OnUnload() {
         (*it)->DeleteTree();
     }
 }
-
-NavListSortNode *NavListSortMgr::GetHighlightItem() {
-    return mSorts[mCurrentSortIdx]->GetUnk50();
-}

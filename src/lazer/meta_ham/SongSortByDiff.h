@@ -10,9 +10,9 @@ class DifficultyCmp : public NavListItemSortCmp {
 
     virtual int Compare(const NavListItemSortCmp *,  NavListNodeType) const;
 
-    int mTier; // 0x0
-    float mRank; // 0x4
-    const char *mName; // 0x8
+    int mTier; // 0x4
+    float mRank; // 0x8
+    const char *mName; // 0xc
 };
 
 class SongSortByDiff : public SongSort {
@@ -23,4 +23,7 @@ public:
     virtual NavListItemNode *NewItemNode(void *) const;
     virtual NavListHeaderNode *NewHeaderNode(NavListItemNode *) const;
     virtual NavListShortcutNode *NewShortcutNode(NavListItemNode *) const;
+
+protected:
+    const char *unk58; // 0x58 - shows up as 0x5c in asm so we off by 4bytes somewhere
 };

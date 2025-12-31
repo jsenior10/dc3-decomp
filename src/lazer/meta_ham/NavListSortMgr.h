@@ -10,7 +10,7 @@
 #include "ui/UIComponent.h"
 #include "ui/UIListCustom.h"
 #include "ui/UIListProvider.h"
-class NavListSortMgr : public UIListProvider, public Hmx::Object, public ContentMgr::Callback {
+class NavListSortMgr : public UIListProvider, Hmx::Object, public ContentMgr::Callback {
 public:
     NavListSortMgr(SongPreview &);
     virtual ~NavListSortMgr();
@@ -36,7 +36,7 @@ public:
     void SetHeaderMode(bool);
     void SetEnteringHeaderMode(bool);
     void SetExitingHeaderMode(bool);
-    NavListSortNode *GetHighlightItem();
+    NavListSortNode *GetHighlightItem() { return mSorts[mCurrentSortIdx]->GetUnk50(); };
     void OnHighlightChanged();
     void OnExit();
     void OnUnload();

@@ -6,32 +6,44 @@
 #include "meta/Sorting.h"
 
 int DifficultyCmp::Compare(const NavListItemSortCmp *cmp, NavListNodeType type) const {
+    DifficultyCmp *diffcmp = (DifficultyCmp *)cmp;
     switch (type) {
-        case kNodeShortcut:
+        case NavListNodeType::kNodeShortcut:
             return 0;
 
-        case kNodeHeader: {
-            const DifficultyCmp *diffCmp = cmp->GetDifficultyCmp();
-            if (mTier == diffCmp->mTier) return 0;
-            if (diffCmp->mTier == -1)   return -1;
-            if (mTier == -1)    return 1;
-            if (mTier < diffCmp->mTier) return -1;
-            else return 1;
+        case NavListNodeType::kNodeHeader: {
+            auto i = diffcmp->GetDifficultyCmp()->mTier;
+            if (i == mTier) {
+                return 0;
+            }
+            if (i == -1) {
+                return -1;
+            }
+            if (mTier == -1) {
+                return 1;
+            }
+            return mTier < diffcmp->mTier ? -1 : 1;
         }
-        case kNodeItem: {
-            const DifficultyCmp *diffCmp = cmp->GetDifficultyCmp();
-            float other = diffCmp->mRank;
+        case NavListNodeType::kNodeItem: {
+            float other = diffcmp->mRank;
             float mine = mRank;
-            if (mine == other) return AlphaKeyStrCmp(mName, diffCmp->mName, false);
-            if (other == 0) return -1;
-            if (mine == 0) return 1;
-            if (mine < other) return -1;
-            else return 1;
+            if (mine == other) {
+                return AlphaKeyStrCmp(mName, diffcmp->mName, true);
+            } else if (other == 0)
+                return -1;
+            else if (mine == 0)
+                return 1;
+            else if (mine < other)
+                return -1;
+            else
+                return 1;
         }
-        default:
+
+        default: {
             MILO_FAIL("invalid type of node comparison.\n");
+            return 0;
+        }
     }
-    return 0;
 }
 
 SongSortByDiff::SongSortByDiff() {
