@@ -1,3 +1,4 @@
+// clang-format off
 /***************************************************************************
  *                                  _   _ ____  _
  *  Project                     ___| | | |  _ \| |
@@ -1013,7 +1014,7 @@ CURLcode Curl_setopt(struct SessionHandle *data, CURLoption option, va_list para
          * This is the value to compare with the remote document with the
          * method set with CURLOPT_TIMECONDITION
          */
-        data->set.timevalue = (time_t)va_arg(param, long);
+        data->set.timevalue = (__time64_t)va_arg(param, long);
         break;
     case CURLOPT_SSLVERSION:
         /*

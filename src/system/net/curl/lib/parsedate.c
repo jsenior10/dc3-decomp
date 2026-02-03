@@ -1,3 +1,4 @@
+// clang-format off
 /***************************************************************************
  *                                  _   _ ____  _
  *  Project                     ___| | | |  _ \| |
@@ -102,7 +103,7 @@ struct tzinfo {
  * PARSEDATE_SOONER - time underflow at the low end of time_t
  */
 
-static int parsedate(const char *date, time_t *output);
+static int parsedate(const char *date, __time64_t *output);
 
 #define PARSEDATE_OK 0
 #define PARSEDATE_FAIL -1
@@ -275,7 +276,7 @@ struct my_tm {
  * doesn't suffer from the various bugs and portability problems that
  * some systems' implementations have.
  */
-static time_t my_timegm(struct my_tm *tm) {
+static __time64_t my_timegm(struct my_tm *tm) {
     static const int month_days_cumulative[12] = { 0,   31,  59,  90,  120, 151,
                                                    181, 212, 243, 273, 304, 334 };
     int month, year, leap_days;
@@ -300,7 +301,7 @@ static time_t my_timegm(struct my_tm *tm) {
         ((leap_days / 4) - (leap_days / 100) + (leap_days / 400) - (1969 / 4)
          + (1969 / 100) - (1969 / 400));
 
-    return ((((time_t)(year - 1970) * 365 + leap_days + month_days_cumulative[month]
+    return ((((__time64_t)(year - 1970) * 365 + leap_days + month_days_cumulative[month]
               + tm->tm_mday - 1)
                  * 24
              + tm->tm_hour)
@@ -321,8 +322,8 @@ static time_t my_timegm(struct my_tm *tm) {
  * PARSEDATE_SOONER - time underflow at the low end of time_t
  */
 
-static int parsedate(const char *date, time_t *output) {
-    time_t t = 0;
+static int parsedate(const char *date, __time64_t *output) {
+    __time64_t t = 0;
     int wdaynum = -1; /* day of the week number, 0-6 (mon-sun) */
     int monnum = -1; /* month of the year number, 0-11 */
     int mdaynum = -1; /* day of month, 1 - 31 */
@@ -500,8 +501,8 @@ static int parsedate(const char *date, time_t *output) {
     return PARSEDATE_OK;
 }
 
-time_t curl_getdate(const char *p, const time_t *now) {
-    time_t parsed;
+__time64_t curl_getdate(const char *p, const __time64_t *now) {
+    __time64_t parsed;
     int rc = parsedate(p, &parsed);
     (void)now; /* legacy argument from the past that we ignore */
 
@@ -524,7 +525,7 @@ time_t curl_getdate(const char *p, const time_t *now) {
  *
  */
 
-CURLcode Curl_gmtime(time_t intime, struct tm *store) {
+CURLcode Curl_gmtime(__time64_t intime, struct tm *store) {
     const struct tm *tm;
 #ifdef HAVE_GMTIME_R
     /* thread-safe version */

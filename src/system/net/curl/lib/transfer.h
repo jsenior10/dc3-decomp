@@ -1,3 +1,4 @@
+// clang-format off
 #ifndef __TRANSFER_H
 #define __TRANSFER_H
 /***************************************************************************
@@ -48,7 +49,7 @@ CURLcode Curl_readrewind(struct connectdata *conn);
 CURLcode Curl_fillreadbuffer(struct connectdata *conn, int bytes, int *nreadp);
 CURLcode Curl_reconnect_request(struct connectdata **connp);
 CURLcode Curl_retry_request(struct connectdata *conn, char **url);
-bool Curl_meets_timecondition(struct SessionHandle *data, time_t timeofdoc);
+bool Curl_meets_timecondition(struct SessionHandle *data, __time64_t timeofdoc);
 
 /* This sets up a forthcoming transfer */
 void

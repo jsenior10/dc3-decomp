@@ -1,3 +1,4 @@
+// clang-format off
 #ifndef HEADER_CURL_URLDATA_H
 #define HEADER_CURL_URLDATA_H
 /***************************************************************************
@@ -589,7 +590,7 @@ struct SingleRequest {
     z_stream z; /* State structure for zlib. */
     // #endif
 
-    time_t timeofdoc;
+    __time64_t timeofdoc;
     long bodywrites;
 
     char *buf;
@@ -1428,7 +1429,7 @@ struct UserDefined {
     struct curl_slist *resolve; /* list of names to add/remove from
                                    DNS cache */
     curl_TimeCond timecondition; /* kind of time/date comparison */
-    time_t timevalue; /* what time to compare with */
+    __time64_t timevalue; /* what time to compare with */
     Curl_HttpReq httpreq; /* what kind of HTTP request (if any) is this */
     long httpversion; /* when non-zero, a specific HTTP version requested to
                          be used in the library's request(s) */

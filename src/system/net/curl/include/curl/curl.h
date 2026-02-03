@@ -1,3 +1,4 @@
+// clang-format off
 #ifndef __CURL_CURL_H
 #define __CURL_CURL_H
 /***************************************************************************
@@ -229,7 +230,7 @@ typedef enum {
 struct curl_fileinfo {
     char *filename;
     curlfiletype filetype;
-    time_t time;
+    __time64_t time;
     unsigned int perm;
     int uid;
     int gid;
@@ -1873,7 +1874,7 @@ CURL_EXTERN void curl_slist_free_all(struct curl_slist *);
  * the first argument. The time argument in the second parameter is unused
  * and should be set to NULL.
  */
-CURL_EXTERN time_t curl_getdate(const char *p, const time_t *unused);
+CURL_EXTERN __time64_t curl_getdate(const char *p, const __time64_t *unused);
 
 /* info about the certificate chain, only for OpenSSL builds. Asked
    for with CURLOPT_CERTINFO / CURLINFO_CERTINFO */

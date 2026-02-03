@@ -1,3 +1,4 @@
+// clang-format off
 /***************************************************************************
  *                                  _   _ ____  _
  *  Project                     ___| | | |  _ \| |
@@ -136,9 +137,9 @@ typedef struct tftp_state_data {
   int             retries;
   int             retry_time;
   int             retry_max;
-  time_t          start_time;
-  time_t          max_time;
-  time_t          rx_time;
+  __time64_t          start_time;
+  __time64_t          max_time;
+  __time64_t          rx_time;
   unsigned short  block;
   struct Curl_sockaddr_storage   local_addr;
   struct Curl_sockaddr_storage   remote_addr;
@@ -205,11 +206,11 @@ const struct Curl_handler Curl_handler_tftp = {
  **********************************************************/
 static CURLcode tftp_set_timeouts(tftp_state_data_t *state)
 {
-  time_t maxtime, timeout;
+  __time64_t maxtime, timeout;
   long timeout_ms;
   bool start = (state->state == TFTP_STATE_START) ? TRUE : FALSE;
 
-  time(&state->start_time);
+  _time64(&state->start_time);
 
   /* Compute drop-dead time */
   timeout_ms = Curl_timeleft(state->conn->data, NULL, start);
@@ -222,7 +223,7 @@ static CURLcode tftp_set_timeouts(tftp_state_data_t *state)
 
   if(start) {
 
-    maxtime = (time_t)(timeout_ms + 500) / 1000;
+    maxtime = (__time64_t)(timeout_ms + 500) / 1000;
     state->max_time = state->start_time+maxtime;
 
     /* Set per-block timeout to total */
@@ -243,7 +244,7 @@ static CURLcode tftp_set_timeouts(tftp_state_data_t *state)
   }
   else {
     if(timeout_ms > 0)
-      maxtime = (time_t)(timeout_ms + 500) / 1000;
+      maxtime = (__time64_t)(timeout_ms + 500) / 1000;
     else
       maxtime = 3600;
 
@@ -273,7 +274,7 @@ static CURLcode tftp_set_timeouts(tftp_state_data_t *state)
         state->retry_time, state->retry_max);
 
   /* init RX time */
-  time(&state->rx_time);
+  _time64(&state->rx_time);
 
   return CURLE_OK;
 }
@@ -619,7 +620,7 @@ static CURLcode tftp_rx(tftp_state_data_t *state, tftp_event_t event)
     else {
       state->state = TFTP_STATE_RX;
     }
-    time(&state->rx_time);
+    _time64(&state->rx_time);
     break;
 
   case TFTP_EVENT_OACK:
@@ -639,7 +640,7 @@ static CURLcode tftp_rx(tftp_state_data_t *state, tftp_event_t event)
 
     /* we're ready to RX data */
     state->state = TFTP_STATE_RX;
-    time(&state->rx_time);
+    _time64(&state->rx_time);
     break;
 
   case TFTP_EVENT_TIMEOUT:
@@ -741,7 +742,7 @@ static CURLcode tftp_tx(tftp_state_data_t *state, tftp_event_t event)
       }
       /* This is the expected packet.  Reset the counters and send the next
          block */
-      time(&state->rx_time);
+      _time64(&state->rx_time);
       state->block++;
     }
     else
@@ -1155,13 +1156,13 @@ static CURLcode tftp_receive_packet(struct connectdata *conn)
  **********************************************************/
 static long tftp_state_timeout(struct connectdata *conn, tftp_event_t *event)
 {
-  time_t                current;
+  __time64_t                current;
   tftp_state_data_t     *state = (tftp_state_data_t *)conn->proto.tftpc;
 
   if(event)
     *event = TFTP_EVENT_NONE;
 
-  time(&current);
+  _time64(&current);
   if(current > state->max_time) {
     DEBUGF(infof(conn->data, "timeout: %ld > %ld\n",
                  (long)current, (long)state->max_time));
@@ -1172,7 +1173,7 @@ static long tftp_state_timeout(struct connectdata *conn, tftp_event_t *event)
   else if(current > state->rx_time+state->retry_time) {
     if(event)
       *event = TFTP_EVENT_TIMEOUT;
-    time(&state->rx_time); /* update even though we received nothing */
+    _time64(&state->rx_time); /* update even though we received nothing */
   }
 
   /* there's a typecast below here since 'time_t' may in fact be larger than

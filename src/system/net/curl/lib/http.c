@@ -1,3 +1,4 @@
+// clang-format off
 /***************************************************************************
  *                                  _   _ ____  _
  *  Project                     ___| | | |  _ \| |
@@ -3382,7 +3383,7 @@ CURLcode Curl_http_readwrite_headers(struct SessionHandle *data,
 #endif
     else if(checkprefix("Last-Modified:", k->p) &&
             (data->set.timecondition || data->set.get_filetime) ) {
-      time_t secs=time(NULL);
+      __time64_t secs=_time64(NULL);
       k->timeofdoc = curl_getdate(k->p+strlen("Last-Modified:"),
                                   &secs);
       if(data->set.get_filetime)

@@ -1,3 +1,4 @@
+// clang-format off
 /***************************************************************************
  *                                  _   _ ____  _
  *  Project                     ___| | | |  _ \| |
@@ -475,7 +476,7 @@ static CURLcode file_do(struct connectdata *conn, bool *done)
   }
 
   if(fstated && !data->state.range && data->set.timecondition) {
-    if(!Curl_meets_timecondition(data, (time_t)data->info.filetime)) {
+    if(!Curl_meets_timecondition(data, (__time64_t)data->info.filetime)) {
       *done = TRUE;
       return CURLE_OK;
     }
@@ -498,7 +499,7 @@ static CURLcode file_do(struct connectdata *conn, bool *done)
       return result;
 
     if(fstated) {
-      time_t filetime = (time_t)statbuf.st_mtime;
+      __time64_t filetime = (__time64_t)statbuf.st_mtime;
       struct tm buffer;
       const struct tm *tm = &buffer;
       result = Curl_gmtime(filetime, &buffer);
