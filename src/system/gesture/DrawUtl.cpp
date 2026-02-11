@@ -27,11 +27,12 @@ namespace {
     void PixelSpace(Hmx::Rect &rect) {
         int width = TheRnd.Width();
         int height = TheRnd.Height();
-        ScreenSpace(rect);
-        rect.x = width * rect.x;
-        rect.y = height * rect.y;
-        rect.w = width * rect.w;
-        rect.h = height * rect.h;
+        Hmx::Rect screenSpace;
+        ScreenSpace(screenSpace);
+        rect.x = width * screenSpace.x;
+        rect.y = height * screenSpace.y;
+        rect.w = width * screenSpace.w;
+        rect.h = height * screenSpace.h;
     }
 }
 
@@ -81,11 +82,11 @@ void InitDrawUtl(const GestureMgr &gm) {
     DrawUtlRect.Set(temp.x, temp.y, temp.w, temp.h);
 }
 
-void SetDrawSpace(float x, float y, float z) {
-    DrawUtlVec3.Set(x, y, z);
-}
+void SetDrawSpace(float x, float y, float z) { DrawUtlVec3.Set(x, y, z); }
 
-bool UpdateBufferTex(LiveCameraInput *cam, RndTex *tex, LiveCameraInput::BufferType bufType, GestureMgr *gm) {
+bool UpdateBufferTex(
+    LiveCameraInput *cam, RndTex *tex, LiveCameraInput::BufferType bufType, GestureMgr *gm
+) {
     START_AUTO_TIMER("draw_natal_buffer");
     MILO_ASSERT(bufType < LiveCameraInput::kBufferNum, 0x12b);
     if (cam == nullptr) {
@@ -94,11 +95,10 @@ bool UpdateBufferTex(LiveCameraInput *cam, RndTex *tex, LiveCameraInput::BufferT
     MILO_ASSERT(tex, 0x130);
     MILO_ASSERT(tex->Bpp() == 16, 0x131);
     MILO_ASSERT(tex->GetType() == RndTex::kScratch, 0x132);
-    //tex->TexelsLock(); seemingly pulls param out of nowehere
+    // tex->TexelsLock(); seemingly pulls param out of nowehere
     if (bufType == LiveCameraInput::kBufferColor) {
         auto bufStream = cam->StreamBufferData(LiveCameraInput::kBufferColor);
         if (bufStream != nullptr) {
-
         }
     }
     return false;
