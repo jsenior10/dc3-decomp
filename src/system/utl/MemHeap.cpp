@@ -115,6 +115,43 @@ void MemHeap::FirstFit(int size, int align, FreeBlockInfo &blockinfo) {
     }
 }
 
+int MemHeap::AllocSize(int *i) {
+    if (i < mStart || i >= mStart + mSizeWords) {
+        return 0;
+    }
+    unsigned int header = i[-1];
+    unsigned int blockSize = header >> 8;
+    unsigned int unk = (header >> 4) & 0xf;
+    int size = (blockSize - unk - 1) * sizeof(*i);
+    return size;
+}
+
+int MemHeap::GetAlignWords(int alignment) {
+    if (alignment == 0) {
+        return 1;
+    }
+
+    int unk = 0;
+    int roundUp = 0;
+    for (; alignment > 1; alignment >>= 1) {
+        if (alignment & 1) {
+            roundUp = 1;
+        }
+        unk++;
+    }
+    unk = unk + roundUp;
+    int extraWords = unk - 2;
+    return (extraWords > 0) ? extraWords : 0;
+}
+
+void MemHeap::BestFit(int i1, int i2, FreeBlockInfo &block) {
+    if (mFreeBlockChain == nullptr) {
+        return;
+    }
+    for (auto chain = mFreeBlockChain; chain != nullptr; chain = chain->mNextBlock) {
+    }
+}
+
 // void __thiscall
 // MemHeap::Init(MemHeap *this,char *param_1,int param_2,int *param_3,int param_4,bool
 // param_5,

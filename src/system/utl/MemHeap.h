@@ -39,6 +39,7 @@ public:
     int *End() const { return mStart + mSizeWords; }
 
     static int GetSizeWords(int);
+    static int GetAlignWords(int);
 
 private:
     void InsertFreeBlock(FreeBlock *, int, FreeBlock *, FreeBlock *, int);
