@@ -533,3 +533,8 @@ void HamNavList::SetHighlight(int i) {
         HandleHighlightChanged(i);
     }
 }
+
+void HamNavList::ClearBigElements() {
+    mBigElements.clear();
+    unk20c.clear();
+}
