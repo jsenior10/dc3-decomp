@@ -54,7 +54,7 @@ public: // RB2 says it's all public
     float mFrame; // 0x10
     /** "Field of view, in degrees, for this keyframe.
         Same as setting lens focal length below". Ranges from 0 to 360. */
-    float mFOV; // 0x14
+    float mFieldOfView; // 0x14
     /** "Field of view adjustment (not affected by target reframing" */
     float mZoomFOV; // 0x18
     /** "Camera position for this keyframe" */
@@ -62,11 +62,11 @@ public: // RB2 says it's all public
     /** "Screen space offset of target for this keyframe" */
     Vector2 mScreenOffset; // 0x5c
     /** "Noise frequency for camera shake" */
-    float mShakeNoiseFreq; // 0x64
+    float mTargetNoiseFreq; // 0x64
     /** "Noise amplitude for camera shake" */
-    float mShakeNoiseAmp; // 0x68
+    float mTargetNoiseAmp; // 0x68
     /** "Maximum angle for camera shake" */
-    Vector2 mShakeMaxAngle; // 0x6c
+    Vector2 mMaxAngularOffset; // 0x6c
     /** "0 to 1 scale representing the Depth size of the blur valley
         (offset from the focal target + focus_blur_multiplier) in the Camera Frustrum.
         Zero puts everything in Blur. 1 puts everything in the Blur falloff valley."
@@ -78,19 +78,19 @@ public: // RB2 says it's all public
     float mMinBlur; // 0x7c
     /** "Multiplier of distance from camere to focal target.
         Offsets focal point of blur." */
-    float mFocusBlurMultiplier; // 0x80
+    float mFocusedFocalPlaneMultiplier; // 0x80
     /** "Target(s) that the camera should look at" */
     ObjPtrList<RndTransformable> mTargets; // 0x84
     Vector3 mLastTargetPos; // 0x98
     /** "Parent that the camera should attach itself to" */
     ObjPtr<RndTransformable> mParent; // 0xa8
-    Transform mTargetXfm; // 0xbc
+    Transform mLastParentPos; // 0xbc
     /** "The focal point when calculated depth of field" */
-    ObjPtr<RndTransformable> mFocalTarget; // 0xfc
+    ObjPtr<RndTransformable> mFocusTarget; // 0xfc
     /** "Whether to take the parent object's rotation into account" */
     bool mUseParentRotation; // 0x110
     /** "Only parent on the first frame" */
-    bool mParentFirstFrame; // 0x111
+    bool mParentFirstFrameOnly; // 0x111
     CamShot *mCamShot; // 0x114
 };
 
@@ -121,8 +121,8 @@ public:
     ObjPtr<WorldCrowd> mCrowd; // 0x0
     /** "How to rotate crowd" */
     CrowdRotate mCrowdRotate; // 0x14
-    std::vector<std::pair<int, int> > unk18; // 0x18
-    CamShot *unk24; // 0x24
+    std::vector<std::pair<int, int> > mCrowdList; // 0x18
+    CamShot *mCamShot; // 0x24
 };
 
 inline BinStream &operator<<(BinStream &bs, const CamShotCrowd &f) {
