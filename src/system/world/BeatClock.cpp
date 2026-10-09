@@ -105,11 +105,11 @@ void BeatClock::Reset() {
     }
 }
 
-void BeatClock::SetBeatsPerMeasure(int beats) {
-    mBeatsPerMeasure = beats;
+void BeatClock::SetBeatsPerMeasure(int beatsPerMeasure) {
+    mBeatsPerMeasure = beatsPerMeasure;
     RELEASE(mMeasureMap);
     mMeasureMap = new MeasureMap();
-    mMeasureMap->AddTimeSignature(0, beats, 4, true);
+    mMeasureMap->AddTimeSignature(0, beatsPerMeasure, 4, true);
 }
 
 void BeatClock::UpdateSongPos() {
