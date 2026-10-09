@@ -22,7 +22,7 @@ RayCastDefaultContainer::RayCastDefaultContainer(
             if (d->MakeWorldSphere(s, false)) {
                 if (box.Contains(s)) {
                     MILO_ASSERT(objMap.find(d) != objMap.end(), 0x73);
-                    unk4.push_back(std::make_pair(d, objMap[d]));
+                    mList.push_back(std::make_pair(d, objMap[d]));
                 }
             }
         }
@@ -30,23 +30,26 @@ RayCastDefaultContainer::RayCastDefaultContainer(
 }
 
 Hmx::Object *RayCastDefaultContainer::FindNearest(
-    const Segment &s, float &f, Vector3 &v, Hmx::Object *&o
+    const Segment &seg,
+    float &frac,
+    Vector3 &hitNormal,
+    Hmx::Object *&mesh
 ) {
-    o = nullptr;
-    f = 1;
-    Segment localSegment = s;
+    mesh = nullptr;
+    frac = 1;
+    Segment localSegment = seg;
     Hmx::Object *ret = nullptr;
-    FOREACH (it, unk4) {
+    FOREACH(it, mList) {
         RndMesh *curMesh = it->first;
         Vector3 curVec;
         Plane curPlane;
         if (curMesh->Collide(localSegment, curVec.x, curPlane)) {
             float xScalar = curVec.x;
             Interp(localSegment.start, localSegment.end, curVec.x, localSegment.end);
-            v = reinterpret_cast<Vector3 &>(curPlane);
-            o = curMesh;
+            hitNormal = reinterpret_cast<Vector3 &>(curPlane);
+            mesh = curMesh;
             ret = it->second;
-            f *= xScalar;
+            frac *= xScalar;
         }
     }
     return ret;
@@ -66,10 +69,11 @@ DefaultDetectionVolume::DefaultDetectionVolume(DetectionVolumeListener *dvl)
 #pragma region DefaultPhysicsManager
 
 DefaultPhysicsManager::DefaultPhysicsManager(RndDir *d)
-    : PhysicsManager(d), unk40(this, kObjListOwnerControl) {}
+    : PhysicsManager(d), mCollidableRefs(this, kObjListOwnerControl) {
+}
 
 bool DefaultPhysicsManager::Replace(ObjRef *from, Hmx::Object *to) {
-    if (from->Parent() != &unk40) {
+    if (from->Parent() != &mCollidableRefs) {
         Hmx::Object *obj = from->GetObj();
         // unk40.erase(it);
         RemoveCollidable(obj);
@@ -106,24 +110,31 @@ void DefaultPhysicsManager::Poll() {
     }
 }
 
-RayCastContainer *DefaultPhysicsManager::MakeContainer(const Box &box, unsigned int ui) {
-    return new RayCastDefaultContainer(box, mActiveCollidables, unk54);
+RayCastContainer *
+DefaultPhysicsManager::MakeContainer(const Box &b, unsigned int filter) {
+    return new RayCastDefaultContainer(b, mActiveCollidables, mCollidableToDirTbl);
 }
 
 DetectionVolume *DefaultPhysicsManager::MakeDetectionVolume(
-    DetectionVolumeListener *dvl, const Transform &, PhysicsVolumeType, CollisionFilter
+    DetectionVolumeListener *listener,
+    const Transform &worldXfrm,
+    PhysicsVolumeType type,
+    CollisionFilter filter
 ) {
-    return new DefaultDetectionVolume(dvl);
+    return new DefaultDetectionVolume(listener);
 }
 
 void DefaultPhysicsManager::CastRays(RayCast *, int) { MILO_FAIL("not implemented"); }
 
 void DefaultPhysicsManager::CastRays(
-    const Segment *s, RayCastListener *rcl, int i3, unsigned int ui4
+    const Segment *inRay,
+    RayCastListener *rayCallback,
+    int count,
+    unsigned int filter
 ) {
     float collideFloat = 1;
-    for (int i = 0; i < i3; i++) {
-        Segment localSegment = s[i];
+    for (int i = 0; i < count; i++) {
+        Segment localSegment = inRay[i];
         FOREACH (it, mActiveCollidables) {
             Plane curPlane;
             RndDrawable *d = (*it)->Collide(localSegment, collideFloat, curPlane);
@@ -133,8 +144,8 @@ void DefaultPhysicsManager::CastRays(
     }
 }
 
-void DefaultPhysicsManager::ActivateCollidable(Hmx::Object *o) {
-    auto it = std::find(mInactiveCollidables.begin(), mInactiveCollidables.end(), o);
+void DefaultPhysicsManager::ActivateCollidable(Hmx::Object *obj) {
+    auto it = std::find(mInactiveCollidables.begin(), mInactiveCollidables.end(), obj);
     if (it != mInactiveCollidables.end()) {
         RndMesh *mesh = *it;
         mInactiveCollidables.erase(it);
@@ -142,8 +153,8 @@ void DefaultPhysicsManager::ActivateCollidable(Hmx::Object *o) {
     }
 }
 
-void DefaultPhysicsManager::DeactivateCollidable(Hmx::Object *o) {
-    auto it = std::find(mInactiveCollidables.begin(), mInactiveCollidables.end(), o);
+void DefaultPhysicsManager::DeactivateCollidable(Hmx::Object *obj) {
+    auto it = std::find(mInactiveCollidables.begin(), mInactiveCollidables.end(), obj);
     if (it != mInactiveCollidables.end()) {
         RndMesh *mesh = *it;
         mActiveCollidables.erase(it);
@@ -152,43 +163,45 @@ void DefaultPhysicsManager::DeactivateCollidable(Hmx::Object *o) {
 }
 
 void DefaultPhysicsManager::RemoveAll() {
-    unk54.clear();
+    mCollidableToDirTbl.clear();
     mActiveCollidables.clear();
     mInactiveCollidables.clear();
-    unk40.clear();
+    mCollidableRefs.clear();
 }
 
-void DefaultPhysicsManager::AddCollidable(Hmx::Object *o, ObjectDir *dir, bool isActive) {
-    RndMesh *mesh = dynamic_cast<RndMesh *>(o);
+void DefaultPhysicsManager::AddCollidable(Hmx::Object *obj,
+                                          ObjectDir *parentDir,
+                                          bool active) {
+    RndMesh *mesh = dynamic_cast<RndMesh *>(obj);
     if (mesh) {
-        if (unk54.find(mesh) == unk54.end()) {
-            unk54[mesh] = dir;
-            if (isActive) {
+        if (mCollidableToDirTbl.find(mesh) == mCollidableToDirTbl.end()) {
+            mCollidableToDirTbl[mesh] = parentDir;
+            if (active) {
                 mActiveCollidables.push_front(mesh);
             } else {
                 mInactiveCollidables.push_front(mesh);
             }
-            unk40.insert(unk40.begin(), o);
+            mCollidableRefs.insert(mCollidableRefs.begin(), obj);
         }
     }
 }
 
-void DefaultPhysicsManager::RemoveCollidable(Hmx::Object *o) {
-    auto mapIt = unk54.find(o);
-    if (mapIt != unk54.end()) {
+void DefaultPhysicsManager::RemoveCollidable(Hmx::Object *obj) {
+    auto mapIt = mCollidableToDirTbl.find(obj);
+    if (mapIt != mCollidableToDirTbl.end()) {
         auto activeIt =
-            std::find(mActiveCollidables.begin(), mActiveCollidables.end(), o);
+            std::find(mActiveCollidables.begin(), mActiveCollidables.end(), obj);
 
         if (activeIt != mActiveCollidables.end()) {
             mActiveCollidables.erase(activeIt);
         } else {
             auto inactiveIt =
-                std::find(mInactiveCollidables.begin(), mInactiveCollidables.end(), o);
+                std::find(mInactiveCollidables.begin(), mInactiveCollidables.end(), obj);
             if (inactiveIt != mInactiveCollidables.end()) {
                 mInactiveCollidables.erase(inactiveIt);
             }
         }
-        unk54.erase(mapIt);
-        unk40.remove(o);
+        mCollidableToDirTbl.erase(mapIt);
+        mCollidableRefs.remove(obj);
     }
 }
