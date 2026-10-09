@@ -34,18 +34,18 @@ static int gNumCrowd = 0;
 static WorldCrowd *gParent = nullptr;
 
 namespace {
-    void GetMeshShaderFlags(RndMat *mat, std::list<unsigned int> &flags) {
+    void GetMeshShaderFlags(RndMat *mat, std::list<unsigned int> &matShaderOptions) {
         FOREACH_OBJREF (it, mat) {
             RndMesh *cur = dynamic_cast<RndMesh *>(it->RefOwner());
             if (cur) {
                 // bit 1 = skinned
                 // bit 2 = ao calc
                 unsigned int mask = cur->IsSkinned() | (cur->HasAOCalc() ? 2 : 0);
-                flags.push_back(mask);
+                matShaderOptions.push_back(mask);
             }
         }
-        flags.sort();
-        flags.unique();
+        matShaderOptions.sort();
+        matShaderOptions.unique();
     }
 }
 
@@ -107,8 +107,9 @@ BinStreamRev &operator>>(BinStreamRev &d, WorldCrowd::CharData &cd) {
 
 WorldCrowd::WorldCrowd()
     : mPlacementMesh(this), mCharacters(this), mNum(0), mRotate(), mForce3DCrowd(0),
-      mShow3DOnly(0), mCharFullness(1), mFlatFullness(1), mLod(0), mEnviron(this),
-      mEnviron3D(this), mFocus(this), mCharForceLod(kLODPerFrame), unkd0(1),
+      m3DOnly(0), mCharFullness(1), mFlatFullness(1), mLod(0), mImposterEnviron(this),
+      m3DCrowdEnviron(this), mFocus(this), mCharForceLod(kLODPerFrame),
+      mRandomColorSeed(1),
       mModifyStamp(0) {
     if (gNumCrowd++ == 0) {
         int w, h, bpp;
@@ -185,9 +186,9 @@ BEGIN_PROPSYNCS(WorldCrowd)
     SYNC_PROP(num, mNum)
     SYNC_PROP(placement_mesh, mPlacementMesh)
     SYNC_PROP(characters, mCharacters)
-    SYNC_PROP(show_3d_only, mShow3DOnly)
-    SYNC_PROP(environ, mEnviron)
-    SYNC_PROP(environ_3d, mEnviron3D)
+    SYNC_PROP(show_3d_only, m3DOnly)
+    SYNC_PROP(environ, mImposterEnviron)
+    SYNC_PROP(environ_3d, m3DCrowdEnviron)
     SYNC_PROP_SET(lod, mLod, SetLod(_val.Int()))
     SYNC_PROP_SET(force_3D_crowd, mForce3DCrowd, Force3DCrowd(_val.Int()))
     SYNC_PROP(focus, mFocus)
@@ -203,8 +204,8 @@ BEGIN_SAVES(WorldCrowd)
     SAVE_SUPERCLASS(RndDrawable)
     bool force = mForce3DCrowd;
     Force3DCrowd(false);
-    bs << mPlacementMesh << mNum << mCharacters << mEnviron;
-    bs << mEnviron3D;
+    bs << mPlacementMesh << mNum << mCharacters << mImposterEnviron;
+    bs << m3DCrowdEnviron;
     FOREACH (it, mCharacters) {
         std::list<Transform> transforms;
         RndMultiMesh *mesh = it->mMMesh;
@@ -217,10 +218,10 @@ BEGIN_SAVES(WorldCrowd)
     }
     bs << mModifyStamp;
     bs << force;
-    bs << mShow3DOnly;
+    bs << m3DOnly;
     bs << mFocus;
     bs << mCharForceLod;
-    bs << unkd0;
+    bs << mRandomColorSeed;
     Force3DCrowd(force);
     SAVE_SUPERCLASS(RndPollable)
 END_SAVES
@@ -237,13 +238,13 @@ BEGIN_COPYS(WorldCrowd)
         COPY_MEMBER(mCharFullness)
         COPY_MEMBER(mFlatFullness)
         COPY_MEMBER(mLod)
-        COPY_MEMBER(mEnviron)
-        COPY_MEMBER(mEnviron3D)
+        COPY_MEMBER(mImposterEnviron)
+        COPY_MEMBER(m3DCrowdEnviron)
         COPY_MEMBER(mForce3DCrowd)
-        COPY_MEMBER(mShow3DOnly)
+        COPY_MEMBER(m3DOnly)
         COPY_MEMBER(mFocus)
         COPY_MEMBER(mCharForceLod)
-        COPY_MEMBER(unkd0)
+        COPY_MEMBER(mRandomColorSeed)
 
         mCharacters.clear();
         mCharacters.resize(c->mCharacters.size());
@@ -286,12 +287,12 @@ BEGIN_LOADS(WorldCrowd)
     }
     d >> mCharacters;
     if (d.rev > 6) {
-        d >> mEnviron;
+        d >> mImposterEnviron;
     }
     if (d.rev > 9) {
-        d >> mEnviron3D;
+        d >> m3DCrowdEnviron;
     } else {
-        mEnviron3D = mEnviron;
+        m3DCrowdEnviron = mImposterEnviron;
     }
     if (d.rev > 1) {
         CreateMeshes();
@@ -354,7 +355,7 @@ BEGIN_LOADS(WorldCrowd)
         Force3DCrowd(force);
     }
     if (d.rev > 5) {
-        d >> mShow3DOnly;
+        d >> m3DOnly;
     }
     if (d.rev > 0xB) {
         d >> mFocus;
@@ -363,7 +364,7 @@ BEGIN_LOADS(WorldCrowd)
         d >> (int &)mCharForceLod;
     }
     if (d.rev > 0xF) {
-        d >> unkd0;
+        d >> mRandomColorSeed;
     }
     if (d.rev > 0) {
         LOAD_SUPERCLASS(RndPollable);
@@ -376,7 +377,7 @@ void WorldCrowd::UpdateSphere() {
     SetSphere(s);
 }
 
-float WorldCrowd::GetDistanceToPlane(const Plane &p, Vector3 &vout) {
+float WorldCrowd::GetDistanceToPlane(const Plane &plane, Vector3 &v) {
     if (mCharacters.empty())
         return 0;
     else {
@@ -386,10 +387,10 @@ float WorldCrowd::GetDistanceToPlane(const Plane &p, Vector3 &vout) {
             RndMultiMesh *multimesh = it->mMMesh;
             if (multimesh) {
                 Vector3 v4c;
-                float f5 = multimesh->GetDistanceToPlane(p, v4c);
+                float f5 = multimesh->GetDistanceToPlane(plane, v4c);
                 if (b1 || (std::fabs(f5) < std::fabs(dist))) {
                     b1 = false;
-                    vout = v4c;
+                    v = v4c;
                     dist = f5;
                 }
             }
@@ -398,8 +399,8 @@ float WorldCrowd::GetDistanceToPlane(const Plane &p, Vector3 &vout) {
     }
 }
 
-bool WorldCrowd::MakeWorldSphere(Sphere &s, bool b) {
-    if (b) {
+bool WorldCrowd::MakeWorldSphere(Sphere &s, bool calc) {
+    if (calc) {
         s.Zero();
         FOREACH (it, mCharacters) {
             RndMultiMesh *multimesh = it->mMMesh;
@@ -417,8 +418,8 @@ bool WorldCrowd::MakeWorldSphere(Sphere &s, bool b) {
         return false;
 }
 
-void WorldCrowd::Mats(std::list<RndMat *> &mats, bool b2) {
-    if (b2) {
+void WorldCrowd::Mats(std::list<RndMat *> &mats, bool allocTempMats) {
+    if (allocTempMats) {
         MatShaderOptions opts;
         opts.pack |= 0x20;
         int masks[2] = { 0xD, 0x13 };
@@ -485,20 +486,20 @@ void WorldCrowd::DrawShowing() {
     }
 }
 
-void WorldCrowd::ListDrawChildren(std::list<RndDrawable *> &draws) {
+void WorldCrowd::ListDrawChildren(std::list<RndDrawable *> &out) {
     FOREACH (it, mCharacters) {
         Character *curChar = it->mDef.mChar;
         if (curChar)
-            draws.push_back(curChar);
+            out.push_back(curChar);
     }
 }
 
-void WorldCrowd::CollideList(const Segment &seg, std::list<Collision> &colls) {
+void WorldCrowd::CollideList(const Segment &seg, std::list<Collision> &collisions) {
     if (TheLoadMgr.EditMode() && CollideSphere(seg)) {
         FOREACH (it, mCharacters) {
             RndMultiMesh *curMM = it->mMMesh;
             if (curMM) {
-                curMM->CollideList(seg, colls);
+                curMM->CollideList(seg, collisions);
             }
             Character *curChar = it->mDef.mChar;
             for (int i = 0; i != it->m3DChars.size(); i++) {
@@ -513,7 +514,8 @@ void WorldCrowd::CollideList(const Segment &seg, std::list<Collision> &colls) {
                             this, it, i, it->m3DChars[i].mXfm
                         );
                     }
-                    colls.push_back(Collision(it->m3DChars[i].m3DCrowdHandle, fl, pl));
+                    collisions.push_back(
+                        Collision(it->m3DChars[i].m3DCrowdHandle, fl, pl));
                 }
             }
         }
@@ -558,11 +560,11 @@ void WorldCrowd::Exit() {
     }
 }
 
-void WorldCrowd::ListPollChildren(std::list<RndPollable *> &polls) const {
+void WorldCrowd::ListPollChildren(std::list<RndPollable *> &out) const {
     FOREACH (it, mCharacters) {
         Character *curChar = it->mDef.mChar;
         if (curChar)
-            polls.push_back(curChar);
+            out.push_back(curChar);
     }
 }
 
@@ -658,7 +660,7 @@ void WorldCrowd::Reset3DCrowd() {
 
 void WorldCrowd::Draw3DChars() {
     if (Crowd3DExists()) {
-        RndEnviron *env = mEnviron3D ? mEnviron3D : mEnviron;
+        RndEnviron *env = m3DCrowdEnviron ? m3DCrowdEnviron : mImposterEnviron;
         bool global = true;
         if (env) {
             global = env->UsesApproxGlobal();
@@ -729,14 +731,16 @@ void WorldCrowd::Set3DCharAll() {
 }
 
 void WorldCrowd::Set3DCharXfm(
-    const std::list<CharData>::iterator &charItr, int char3DIdx, const Transform &xfm
+    const std::list<CharData>::iterator &charItr,
+    int char3DIdx,
+    const Transform &t
 ) {
     MILO_ASSERT_RANGE(char3DIdx, 0, charItr->m3DChars.size(), 0x289);
-    charItr->m3DChars[char3DIdx].mXfm = xfm;
+    charItr->m3DChars[char3DIdx].mXfm = t;
     bool foundCreated = false;
     for (int i = 0; i < charItr->m3DCharsCreated.size(); i++) {
         if (charItr->m3DChars[char3DIdx].mIndex == charItr->m3DCharsCreated[i].mIndex) {
-            charItr->m3DCharsCreated[i].mXfm = xfm;
+            charItr->m3DCharsCreated[i].mXfm = t;
             foundCreated = true;
             break;
         }
@@ -776,10 +780,10 @@ void WorldCrowd::Apply3DCharXfm(
     }
 }
 
-void WorldCrowd::SetFullness(float f1, float f2) {
+void WorldCrowd::SetFullness(float flat, float full) {
     START_AUTO_TIMER("crowd_set");
-    mCharFullness = f2;
-    mFlatFullness = f1;
+    mCharFullness = full;
+    mFlatFullness = flat;
     Delete3DCrowdHandles();
     FOREACH (it, mCharacters) {
         if (it->mMMesh) {
@@ -813,9 +817,9 @@ void WorldCrowd::SetFullness(float f1, float f2) {
     AssignRandomColors(false);
 }
 
-void WorldCrowd::AssignRandomColors(bool b1) {
-    if (b1) {
-        unkd0++;
+void WorldCrowd::AssignRandomColors(bool force) {
+    if (force) {
+        mRandomColorSeed++;
     }
     FOREACH (it, mCharacters) {
         if (it->mDef.mChar && it->mMMesh && !it->m3DChars.empty()) {
@@ -832,7 +836,7 @@ void WorldCrowd::AssignRandomColors(bool b1) {
                 for (int i = 0; i != it->m3DChars.size(); i++) {
                     CharData::Char3D &curChar3D = it->m3DChars[i];
                     curChar3D.mRandColors.clear();
-                    Rand rand(curChar3D.mIndex + unkd0);
+                    Rand rand(curChar3D.mIndex + mRandomColorSeed);
                     it->mDef.mUseRandomColor = true;
                     for (int j = 0; j < 3; j++) {
                         ColorPalette *curPalette = colorPalettes[j];
@@ -874,7 +878,8 @@ RndMesh *WorldCrowd::BuildBillboard(Character *c, float f) {
 }
 
 void WorldCrowd::Set3DCharList(
-    const std::vector<std::pair<int, int> > &pairs, Hmx::Object *obj
+    const std::vector<std::pair<int, int> > &chars,
+    Hmx::Object *setter
 ) {
     START_AUTO_TIMER("crowd_set3d");
 
@@ -885,14 +890,14 @@ void WorldCrowd::Set3DCharList(
         Reset3DCrowd();
 
         std::vector<std::pair<RndMultiMesh *, InstanceList::iterator> > meshVec;
-        meshVec.reserve(pairs.size());
+        meshVec.reserve(chars.size());
 
-        for (int i = 0; i != pairs.size(); i++) {
-            int mesh = pairs[i].first;
+        for (int i = 0; i != chars.size(); i++) {
+            int mesh = chars[i].first;
             if (mesh >= mCharacters.size()) {
                 MILO_NOTIFY(
                     "%s setting bad mesh %d, only has %d",
-                    PathName(obj),
+                    PathName(setter),
                     mesh,
                     mCharacters.size()
                 );
@@ -904,11 +909,11 @@ void WorldCrowd::Set3DCharList(
                 ++it;
             }
             if (it->mMMesh) {
-                int charVal = pairs[i].second;
+                int charVal = chars[i].second;
                 if (charVal >= it->mMMesh->Instances().size()) {
                     MILO_NOTIFY(
                         "%s setting bad 3d char %d on mmesh %s, only has %d chars",
-                        PathName(obj),
+                        PathName(setter),
                         charVal,
                         it->mMMesh->Name(),
                         it->mMMesh->Instances().size()

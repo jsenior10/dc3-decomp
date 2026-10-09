@@ -135,19 +135,19 @@ protected:
     bool mForce3DCrowd; // 0x80
     /** "Shows only the 3D crowd, but ONLY in Milo
         so you can more easily distinguish them from the 2d crowd" */
-    bool mShow3DOnly; // 0x81
+    bool m3DOnly; // 0x81
     float mCharFullness; // 0x84
     float mFlatFullness; // 0x88
     int mLod; // 0x8c
     /** "The environ to render the imposter billboards with" */
-    ObjPtr<RndEnviron> mEnviron; // 0x90
+    ObjPtr<RndEnviron> mImposterEnviron; // 0x90
     /** "The environ used when rendering the 3D crowd set by a cam shot" */
-    ObjPtr<RndEnviron> mEnviron3D; // 0xa4
+    ObjPtr<RndEnviron> m3DCrowdEnviron; // 0xa4
     /** "Optional crowd facing focus when rotate is set to kCrowdRotateNone" */
     ObjPtr<RndTransformable> mFocus; // 0xb8
     /** "Force character Level of Detail.
         -1 means no LOD is forced." */
     LODType mCharForceLod; // 0xcc
-    int unkd0; // 0xd0
+    int mRandomColorSeed; // 0xd0
     int mModifyStamp; // 0xd4
 };
