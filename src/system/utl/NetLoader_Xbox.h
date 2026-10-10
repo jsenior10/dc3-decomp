@@ -12,5 +12,5 @@ public:
 
 private:
     HttpGet *mHttpGet; // 0x20
-    bool unk24; // 0x24
+    bool mIsDownloaded; // 0x24
 };

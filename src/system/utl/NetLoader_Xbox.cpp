@@ -4,7 +4,8 @@
 #include "utl/NetCacheMgr_Xbox.h"
 #include "utl/NetCacheMgr.h"
 
-NetLoaderXbox::NetLoaderXbox(const String &str) : NetLoader(str), unk24(0) {
+NetLoaderXbox::NetLoaderXbox(const String &str)
+    : NetLoader(str), mIsDownloaded(0) {
     NetCacheMgrXbox *pNetCacheMgrXbox = dynamic_cast<NetCacheMgrXbox *>(TheNetCacheMgr);
     MILO_ASSERT(pNetCacheMgrXbox, 0x17);
     unsigned int ip = pNetCacheMgrXbox->GetIP();
@@ -19,8 +20,8 @@ NetLoaderXbox::~NetLoaderXbox() { RELEASE(mHttpGet); }
 void NetLoaderXbox::PollLoading() {
     MILO_ASSERT(mHttpGet, 0x2A);
     mHttpGet->Poll();
-    if (!unk24 && mHttpGet->IsDownloaded()) {
-        unk24 = true;
+    if (!mIsDownloaded && mHttpGet->IsDownloaded()) {
+        mIsDownloaded = true;
         SetSize(mHttpGet->GetBufferSize());
         AttachBuffer(mHttpGet->DetachBuffer());
         PostDownload();
