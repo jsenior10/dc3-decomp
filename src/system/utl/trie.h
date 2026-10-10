@@ -45,66 +45,66 @@ public:
 
     unsigned int &first_child(unsigned int idx) {
         check_index(idx);
-        return _nodes[idx].firstChild;
+        return _nodes[idx]._firstChild;
     }
     void set_first_child(unsigned int idx, const unsigned int &value) {
         check_index(idx);
-        _nodes[idx].firstChild = value;
+        _nodes[idx]._firstChild = value;
     }
     unsigned int &sibling(unsigned int idx) {
         check_index(idx);
-        return _nodes[idx].nextSibling;
+        return _nodes[idx]._sibling;
     }
     void set_next_sibling(unsigned int idx, const unsigned int &sibling) {
         check_index(idx);
-        _nodes[idx].nextSibling = sibling;
+        _nodes[idx]._sibling = sibling;
     }
     void clear_next_sibling(unsigned int idx) {
         if (_freeListHead) {
             check_index(idx);
-            _nodes[idx].nextSibling = _freeListHead;
+            _nodes[idx]._sibling = _freeListHead;
         }
         _freeListHead = idx;
     }
     unsigned int &parent(unsigned int idx) {
         check_index(idx);
-        return _nodes[idx].parent;
+        return _nodes[idx]._parent;
     }
     void set_parent(unsigned int idx, unsigned int parent) {
         check_index(idx);
-        _nodes[idx].parent = parent;
+        _nodes[idx]._parent = parent;
     }
     void clear_parent(unsigned int idx) {
         check_index(idx);
-        _nodes[idx].parent = 0;
-        _nodes[idx].mCounts = 0;
+        _nodes[idx]._parent = 0;
+        _nodes[idx]._count = 0;
     }
 
     char &ch(unsigned int idx) {
         check_index(idx);
-        return _nodes[idx].mChar;
+        return _nodes[idx]._ch;
     }
     void set_char(unsigned int idx, char c) {
         check_index(idx);
-        _nodes[idx].mChar = c;
+        _nodes[idx]._ch = c;
     }
 
     unsigned int dup_count(unsigned int idx) {
         check_index(idx);
-        return _nodes[idx].mCounts >> 8;
+        return _nodes[idx]._count >> 8;
     }
     void set_dup_count(unsigned int idx, unsigned int dup_count) {
         check_index(idx);
-        _nodes[idx].mCounts = (dup_count << 8) | (_nodes[idx].mCounts & 0xFF);
+        _nodes[idx]._count = (dup_count << 8) | (_nodes[idx]._count & 0xFF);
     }
 
     unsigned int count(unsigned int idx) {
         check_index(idx);
-        return _nodes[idx].mCounts & 0xFF;
+        return _nodes[idx]._count & 0xFF;
     }
     void set_count(unsigned int idx, unsigned int count) {
         check_index(idx);
-        _nodes[idx].mCounts = (_nodes[idx].mCounts & ~0xFF) | count;
+        _nodes[idx]._count = (_nodes[idx]._count & ~0xFF) | count;
     }
 
     MEM_OVERLOAD(Trie, 0x28);
@@ -112,13 +112,13 @@ public:
 private:
     // size 0x11
     struct Node {
-        unsigned int firstChild; // 0x0
-        unsigned int nextSibling; // 0x4
-        unsigned int parent; // 0x8
+        unsigned int _firstChild; // 0x0
+        unsigned int _sibling; // 0x4
+        unsigned int _parent; // 0x8
         // top 24 bits = dupe count
         // bottom 8 bits = regular count
-        unsigned int mCounts; // 0xc
-        char mChar; // 0x10
+        unsigned int _count; // 0xc
+        char _ch; // 0x10
     };
 
     Node _nodes[MAX_NODES]; // 0x0
