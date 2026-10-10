@@ -24,20 +24,23 @@ Rand CameraManager::sRand(0);
 int CameraManager::sSeed;
 
 CameraManager::CameraManager()
-    : mParent(nullptr), mNextShot(this), mBlendTime(0), unk58(true), mCurrentShot(this),
-      mCamStartTime(0), mFreeCam(nullptr), unk78(this) {}
+    : mParent(nullptr), mNextShot(this), mBlendTime(0), mNextShotChanged(true),
+      mCurrentCam(this),
+      mCamStartTime(0), mFreeCam(nullptr), mCrowds(this) {
+}
 
 CameraManager::CameraManager(WorldDir *parent)
-    : mParent(parent), mNextShot(this), mBlendTime(0), unk58(true), mCurrentShot(this),
-      mCamStartTime(0), mFreeCam(nullptr), unk78(this) {
+    : mParent(parent), mNextShot(this), mBlendTime(0), mNextShotChanged(true),
+      mCurrentCam(this),
+      mCamStartTime(0), mFreeCam(nullptr), mCrowds(this) {
     MILO_ASSERT(mParent, 0x34);
 }
 
 CameraManager::~CameraManager() {
     StartShot_(nullptr);
     RELEASE(mFreeCam);
-    FOREACH (it, mCameraShotCategories) {
-        delete it->unk4;
+    FOREACH(it, mCategories) {
+        delete it->mShots;
     }
 }
 
@@ -91,20 +94,20 @@ BEGIN_LOADS(CameraManager)
 END_LOADS
 
 void CameraManager::Enter() {
-    unk58 = true;
+    mNextShotChanged = true;
     mBlendTime = 0.0f;
     StartShot_(0);
     DeleteFreeCam();
 }
 
 void CameraManager::ForceCamShot(CamShot *shot) {
-    unk58 = true;
+    mNextShotChanged = true;
     mNextShot = shot;
 }
 
 float CameraManager::CalcFrame() {
-    float ttime = TheTaskMgr.Time(mCurrentShot->Units()) - mCamStartTime;
-    ttime *= mCurrentShot->FramesPerUnit();
+    float ttime = TheTaskMgr.Time(mCurrentCam->Units()) - mCamStartTime;
+    ttime *= mCurrentCam->FramesPerUnit();
     return ttime;
 }
 
@@ -118,14 +121,14 @@ CamShot *CameraManager::MiloCamera() {
     return nullptr;
 }
 
-FreeCamera *CameraManager::GetFreeCam(int padnum) {
+FreeCamera *CameraManager::GetFreeCam(int padNum) {
     if (!mParent) {
         MILO_NOTIFY("%s can't make free cam without parent", PathName(this));
         return nullptr;
     }
     if (!mFreeCam) {
         mFreeCam = new FreeCamera(mParent, 0.001f, 0.05f, 0);
-        mFreeCam->SetPadNum(padnum);
+        mFreeCam->SetPadNum(padNum);
     }
     return mFreeCam;
 }
@@ -133,34 +136,34 @@ FreeCamera *CameraManager::GetFreeCam(int padnum) {
 void CameraManager::DeleteFreeCam() { RELEASE(mFreeCam); }
 
 void CameraManager::SetNextShot(CamShot *shot) {
-    unk58 = shot != mNextShot || unk58;
+    mNextShotChanged = shot != mNextShot || mNextShotChanged;
     mNextShot = shot;
 }
 
-void CameraManager::ForceCameraShot(CamShot *shot, bool b) {
-    unk58 = (shot != mNextShot || b) || unk58;
+void CameraManager::ForceCameraShot(CamShot *shot, bool forceRestart) {
+    mNextShotChanged = (shot != mNextShot || forceRestart) || mNextShotChanged;
     mNextShot = shot;
 }
 
-void CameraManager::FirstShotOk(Symbol s) {
+void CameraManager::FirstShotOk(Symbol category) {
     static Message first_shot_ok("first_shot_ok", "");
-    first_shot_ok[0] = s;
+    first_shot_ok[0] = category;
     HandleType(first_shot_ok);
 }
 
 void CameraManager::StartShot_(CamShot *shot) {
-    if (mCurrentShot)
-        mCurrentShot->EndAnim();
+    if (mCurrentCam)
+        mCurrentCam->EndAnim();
 
-    if (TheDOFProc && !shot && mCurrentShot) {
+    if (TheDOFProc && !shot && mCurrentCam) {
         TheDOFProc->UnSet();
     }
 
-    mCurrentShot = shot;
-    if (mCurrentShot) {
-        mCurrentShot->StartAnim();
+    mCurrentCam = shot;
+    if (mCurrentCam) {
+        mCurrentCam->StartAnim();
         mCamStartTime = TheTaskMgr.Time(shot->Units());
-        mBlendAmount = 0.0f;
+        mLastBlend = 0.0f;
     }
 }
 
@@ -170,14 +173,14 @@ struct NameSort {
     }
 };
 
-void CameraManager::RandomizeCategory(ObjPtrList<CamShot> &camlist) {
+void CameraManager::RandomizeCategory(ObjPtrList<CamShot> &cams) {
     std::vector<CamShot *> camshots;
     {
         MemDoTempAllocations m;
-        camshots.resize(camlist.size());
+        camshots.resize(cams.size());
     }
     int idx = 0;
-    FOREACH (it, camlist) {
+    FOREACH(it, cams) {
         camshots[idx++] = *it;
     }
     std::sort(camshots.begin(), camshots.end(), NameSort());
@@ -185,29 +188,28 @@ void CameraManager::RandomizeCategory(ObjPtrList<CamShot> &camlist) {
         int randIdx = sRand.Int(i, camshots.size());
         std::swap(camshots[i], camshots[randIdx]);
     }
-    camlist.clear();
+    cams.clear();
     for (int i = 0; i < idx; i++) {
-        camlist.push_back(camshots[i]);
+        cams.push_back(camshots[i]);
     }
 }
 
 void CameraManager::PrePoll() {
     if (!MiloCamera()) {
-        if (unk58) {
+        if (mNextShotChanged) {
             StartShot_(mNextShot);
-            unk58 = false;
+            mNextShotChanged = false;
         }
-        if (mCurrentShot) {
-            mCurrentShot->SetPreFrame(CalcFrame(), 1.0f);
+        if (mCurrentCam) {
+            mCurrentCam->SetPreFrame(CalcFrame(), 1.0f);
         }
     }
 }
 
-CamShot *CameraManager::ShotAfter(CamShot *cshot) {
+CamShot *CameraManager::ShotAfter(CamShot *cur) {
     ObjDirItr<CamShot> it((ObjectDir *)mParent, true);
     CamShot *ret = it;
-    for (; it != 0 && it != cshot; ++it)
-        ;
+    for (; it != 0 && it != cur; ++it);
     if (it)
         ++it;
     if (!it)
@@ -216,25 +218,27 @@ CamShot *CameraManager::ShotAfter(CamShot *cshot) {
         return it;
 }
 
-DataNode CameraManager::OnCycleShot(DataArray *da) {
-    CamShot *after = ShotAfter(mCurrentShot);
+DataNode CameraManager::OnCycleShot(DataArray *result) {
+    CamShot *after = ShotAfter(mCurrentCam);
     if (after)
         ForceCameraShot(after, true);
     return 0;
 }
 
 Symbol CameraManager::MakeCategoryAndFilters(
-    DataArray *da, std::vector<PropertyFilter> &filts, float *f
+    DataArray *args,
+    std::vector<PropertyFilter> &filterList,
+    float *blendTime
 ) {
     static Symbol flags_exact("flags_exact");
     static Symbol flags_any("flags_any");
-    Symbol sym = da->Sym(2);
+    Symbol sym = args->Sym(2);
     int floatIdx = 3;
-    if (da->Size() > 3) {
-        const DataNode &n = da->Evaluate(3);
+    if (args->Size() > 3) {
+        const DataNode &n = args->Evaluate(3);
         DataArray *nArr = n.Type() == kDataArray ? n.Array() : nullptr;
         if (nArr) {
-            DataArray *arr = da->Array(3);
+            DataArray *arr = args->Array(3);
             floatIdx = 4;
             for (uint i = 0; i != arr->Size(); i++) {
                 DataArray *currArr = arr->Array(i);
@@ -243,18 +247,19 @@ Symbol CameraManager::MakeCategoryAndFilters(
                 if (filt.prop.Type() == kDataSymbol && filt.prop.Sym() == flags_exact) {
                     filt.mask = currArr->Int(1);
                     filt.match = currArr->Int(2);
-                } else if (filt.prop.Type() == kDataSymbol && filt.prop.Sym() == flags_any) {
+                } else if (filt.prop.Type() == kDataSymbol
+                           && filt.prop.Sym() == flags_any) {
                     filt.mask = currArr->Int(1);
                     filt.match = 1;
                 } else {
                     filt.match = currArr->Evaluate(1);
                     filt.mask = -1;
                 }
-                filts.push_back(filt);
+                filterList.push_back(filt);
             }
         }
-        if (f) {
-            *f = da->Float(floatIdx);
+        if (blendTime) {
+            *blendTime = args->Float(floatIdx);
         }
     }
     return sym;
@@ -262,7 +267,7 @@ Symbol CameraManager::MakeCategoryAndFilters(
 
 bool CameraManager::SetCrowds(ObjVector<CamShotCrowd> &crowds) {
     bool ret = false;
-    FOREACH (it, unk78) {
+    FOREACH(it, mCrowds) {
         WorldCrowd *curCrowd = *it;
         ObjVector<CamShotCrowd>::iterator target = crowds.end();
         FOREACH (cit, crowds) {
@@ -282,11 +287,12 @@ bool CameraManager::SetCrowds(ObjVector<CamShotCrowd> &crowds) {
     return ret;
 }
 
-bool CameraManager::ShotMatches(CamShot *shot, const std::vector<PropertyFilter> &filts) {
+bool CameraManager::ShotMatches(CamShot *shot,
+                                const std::vector<PropertyFilter> &filters) {
     static Symbol flags_exact("flags_exact");
     static Symbol flags_any("flags_any");
     int shotFlags = shot->Flags();
-    FOREACH (it, filts) {
+    FOREACH(it, filters) {
         DataNode n;
         if (it->prop.Type() == kDataArray) {
             n = shot->Property(it->prop.Array())->Evaluate();
@@ -318,14 +324,15 @@ bool CameraManager::ShotMatches(CamShot *shot, const std::vector<PropertyFilter>
 }
 
 CamShot *
-CameraManager::FindCameraShot(Symbol s, const std::vector<PropertyFilter> &filts) {
-    FirstShotOk(s);
-    ObjPtrList<CamShot> &camlist = FindOrAddCategory(s);
+CameraManager::FindCameraShot(Symbol category,
+                              const std::vector<PropertyFilter> &filters) {
+    FirstShotOk(category);
+    ObjPtrList<CamShot> &camlist = FindOrAddCategory(category);
     FOREACH (it, camlist) {
         CamShot *cur = *it;
-        if (!cur->Disabled() && ShotMatches(cur, filts)) {
-            if (cur->ShotOk(mCurrentShot)) {
-                camlist.splice(camlist.end(), camlist, it);
+        if (!cur->Disabled() && ShotMatches(cur, filters)) {
+            if (cur->ShotOk(mCurrentCam)) {
+                camlist.MoveItem(camlist.end(), camlist, it);
                 return cur;
             }
         }
@@ -335,31 +342,37 @@ CameraManager::FindCameraShot(Symbol s, const std::vector<PropertyFilter> &filts
 
 ObjPtrList<CamShot> &CameraManager::FindOrAddCategory(Symbol cat) {
     Category targetCat;
-    targetCat.unk0 = cat;
+    targetCat.mCategory = cat;
     Category *lowerCat = std::lower_bound(
-        mCameraShotCategories.begin(), mCameraShotCategories.end(), targetCat
+        mCategories.begin(),
+        mCategories.end(),
+        targetCat
     );
-    if (lowerCat == mCameraShotCategories.end() || lowerCat->unk0 != cat) {
-        targetCat.unk4 = new ObjPtrList<CamShot>(mParent);
-        mCameraShotCategories.push_back(targetCat);
-        std::sort(mCameraShotCategories.begin(), mCameraShotCategories.end());
+    if (lowerCat == mCategories.end() || lowerCat->mCategory != cat) {
+        targetCat.mShots = new ObjPtrList<CamShot>(mParent);
+        mCategories.push_back(targetCat);
+        std::sort(mCategories.begin(), mCategories.end());
         lowerCat = std::lower_bound(
-            mCameraShotCategories.begin(), mCameraShotCategories.end(), targetCat
+            mCategories.begin(),
+            mCategories.end(),
+            targetCat
         );
     }
-    return *lowerCat->unk4;
+    return *lowerCat->mShots;
 }
 
 int CameraManager::NumCameraShots(
-    Symbol s, const std::vector<PropertyFilter> &filts, std::list<CamShot *> *shots
+    Symbol category,
+    const std::vector<PropertyFilter> &filters,
+    std::list<CamShot *> *shots
 ) {
-    FirstShotOk(s);
-    ObjPtrList<CamShot> &camlist = FindOrAddCategory(s);
+    FirstShotOk(category);
+    ObjPtrList<CamShot> &camlist = FindOrAddCategory(category);
     int num = 0;
     FOREACH (it, camlist) {
         CamShot *cur = *it;
-        if (cur->Disabled() == 0 && ShotMatches(cur, filts)
-            && cur->ShotOk(mCurrentShot)) {
+        if (cur->Disabled() == 0 && ShotMatches(cur, filters)
+            && cur->ShotOk(mCurrentCam)) {
             shots->push_back(cur);
             num++;
         }
@@ -369,8 +382,8 @@ int CameraManager::NumCameraShots(
 
 void CameraManager::Randomize() {
     sRand.Seed(sSeed);
-    FOREACH (it, mCameraShotCategories) {
-        RandomizeCategory(*it->unk4);
+    FOREACH(it, mCategories) {
+        RandomizeCategory(*it->mShots);
     }
 }
 
@@ -378,18 +391,18 @@ void CameraManager::Poll() {
     static Symbol shot("shot");
     static Symbol category("category");
     if (!MiloCamera()) {
-        if (mCurrentShot) {
-            bool shotOver = mCurrentShot->ShotOver();
-            RndCam *cam = mCurrentShot->GetCam();
+        if (mCurrentCam) {
+            bool shotOver = mCurrentCam->ShotOver();
+            RndCam *cam = mCurrentCam->GetCam();
             if (cam) {
                 Transform tfc0 = cam->LocalXfm();
                 float yFov = cam->YFov();
                 float nearPlane = cam->NearPlane();
                 float farPlane = cam->FarPlane();
                 float frame = CalcFrame();
-                mCurrentShot->SetFrame(frame, 1);
+                mCurrentCam->SetFrame(frame, 1);
                 float f16 = mBlendTime > 0 ? Clamp(0.0f, 1.0f, frame / mBlendTime) : 1;
-                if (unk58) {
+                if (mNextShotChanged) {
                     f16 = 0;
                 }
                 if (f16 < 1) {
@@ -403,20 +416,22 @@ void CameraManager::Poll() {
                     Cross(localXfm.m.x, localXfm.m.y, localXfm.m.z);
                     Normalize(localXfm.m.z, localXfm.m.z);
                     Cross(localXfm.m.y, localXfm.m.z, localXfm.m.x);
-                    float blendYFov = Interp(yFov, cam->YFov(), f16);
-                    float blendNear = Interp(nearPlane, cam->NearPlane(), f16);
-                    float blendFar = Interp(farPlane, cam->FarPlane(), f16);
-                    cam->SetFrustum(blendNear, blendFar, blendYFov, 1);
-                } else if (mBlendAmount < 1) {
+                    cam->SetFrustum(
+                        Interp(nearPlane, cam->NearPlane(), f16),
+                        Interp(farPlane, cam->FarPlane(), f16),
+                        Interp(yFov, cam->YFov(), f16),
+                        1
+                    );
+                } else if (mLastBlend < 1) {
                     static Message msg("blend_finished", 0);
-                    msg[0] = mCurrentShot.Ptr();
+                    msg[0] = mCurrentCam.Ptr();
                     Export(msg, true);
                 }
-                mBlendAmount = f16;
+                mLastBlend = f16;
             }
-            if (!shotOver && mCurrentShot && mCurrentShot->ShotOver()) {
+            if (!shotOver && mCurrentCam && mCurrentCam->ShotOver()) {
                 static Message msg("shot_over", 0);
-                msg[0] = mCurrentShot.Ptr();
+                msg[0] = mCurrentCam.Ptr();
                 Export(msg, true);
             }
         }
@@ -428,9 +443,9 @@ void CameraManager::Poll() {
 
 void CameraManager::SyncObjects(WorldDir *parent) {
     mParent = parent;
-    mCameraShotCategories.clear();
-    mCameraShotCategories.reserve(100);
-    unk78.clear();
+    mCategories.clear();
+    mCategories.reserve(100);
+    mCrowds.clear();
     for (ObjDirItr<Hmx::Object> it(mParent, true); it != nullptr; ++it) {
         CamShot *shot = dynamic_cast<CamShot *>(&*it);
         if (shot) {
@@ -441,7 +456,7 @@ void CameraManager::SyncObjects(WorldDir *parent) {
         } else {
             WorldCrowd *crowd = dynamic_cast<WorldCrowd *>(&*it);
             if (crowd) {
-                unk78.push_back(crowd);
+                mCrowds.push_back(crowd);
             }
         }
     }
@@ -449,14 +464,15 @@ void CameraManager::SyncObjects(WorldDir *parent) {
 }
 
 CamShot *
-CameraManager::PickCameraShot(Symbol s, const std::vector<PropertyFilter> &filts) {
-    CamShot *ret = FindCameraShot(s, filts);
+CameraManager::PickCameraShot(Symbol category,
+                              const std::vector<PropertyFilter> &filters) {
+    CamShot *ret = FindCameraShot(category, filters);
     if (!ret) {
         static Symbol flags_exact("flags_exact");
         static Symbol flags_any("flags_any");
         String msg("No acceptable camera shot:");
-        msg << " cat: " << s;
-        FOREACH (it, filts) {
+        msg << " cat: " << category;
+        FOREACH(it, filters) {
             msg << " (" << it->prop << " " << it->match;
             if (it->prop.Equal(flags_any, nullptr, true)
                 || it->prop.Equal(flags_exact, nullptr, true)) {
@@ -467,43 +483,43 @@ CameraManager::PickCameraShot(Symbol s, const std::vector<PropertyFilter> &filts
         MILO_NOTIFY(msg.c_str());
         return nullptr;
     } else {
-        unk58 = true;
+        mNextShotChanged = true;
         mNextShot = ret;
         return ret;
     }
 }
 
-DataNode CameraManager::OnPickCameraShot(DataArray *da) {
+DataNode CameraManager::OnPickCameraShot(DataArray *args) {
     std::vector<PropertyFilter> pvec;
     pvec.reserve(20);
-    Symbol sym = MakeCategoryAndFilters(da, pvec, &mBlendTime);
+    Symbol sym = MakeCategoryAndFilters(args, pvec, &mBlendTime);
     return PickCameraShot(sym, pvec);
 }
 
-DataNode CameraManager::OnFindCameraShot(DataArray *da) {
+DataNode CameraManager::OnFindCameraShot(DataArray *args) {
     std::vector<PropertyFilter> pvec;
     pvec.reserve(20);
-    Symbol sym = MakeCategoryAndFilters(da, pvec, nullptr);
+    Symbol sym = MakeCategoryAndFilters(args, pvec, nullptr);
     return FindCameraShot(sym, pvec);
 }
 
-DataNode CameraManager::OnNumCameraShots(DataArray *da) {
+DataNode CameraManager::OnNumCameraShots(DataArray *arg) {
     std::vector<PropertyFilter> pvec;
     pvec.reserve(20);
-    Symbol sym = MakeCategoryAndFilters(da, pvec, nullptr);
+    Symbol sym = MakeCategoryAndFilters(arg, pvec, nullptr);
     return NumCameraShots(sym, pvec, nullptr);
 }
 
-DataNode CameraManager::OnRandomSeed(DataArray *da) {
-    sSeed = da->Int(2);
+DataNode CameraManager::OnRandomSeed(DataArray *msg) {
+    sSeed = msg->Int(2);
     Randomize();
     return 0;
 }
 
-DataNode CameraManager::OnGetShotList(DataArray *a) {
+DataNode CameraManager::OnGetShotList(DataArray *msg) {
     DataArray *list = new DataArray(0);
-    FOREACH (it, mCameraShotCategories) {
-        FOREACH_PTR (shotIt, it->unk4) {
+    FOREACH(it, mCategories) {
+        FOREACH_PTR(shotIt, it->mShots) {
             list->Insert(list->Size(), *shotIt);
         }
     }
@@ -514,14 +530,14 @@ DataNode CameraManager::OnGetShotList(DataArray *a) {
     return ret;
 }
 
-DataNode CameraManager::OnIterateShot(DataArray *da) {
-    DataNode *var = da->Var(2);
+DataNode CameraManager::OnIterateShot(DataArray *msg) {
+    DataNode *var = msg->Var(2);
     DataNode d28(*var);
-    FOREACH (it, mCameraShotCategories) {
-        FOREACH_PTR (lit, it->unk4) {
+    FOREACH(it, mCategories) {
+        FOREACH_PTR(lit, it->mShots) {
             *var = *lit;
-            for (int i = 3; i < da->Size(); i++) {
-                da->Command(i)->Execute();
+            for (int i = 3; i < msg->Size(); i++) {
+                msg->Command(i)->Execute();
             }
         }
     }
