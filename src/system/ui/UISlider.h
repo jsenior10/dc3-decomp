@@ -56,9 +56,9 @@ protected:
     void Update();
     DataNode OnMsg(const ButtonDownMsg &);
 
-    ResourceDirPtr<RndDir> mSliderResource; // 0x50
-    RndMesh *unk68; // 0x68
-    RndMat *unk6c[UIComponent::kNumStates]; // 0x6c
+    ResourceDirPtr<RndDir> mResourceDir; // 0x50
+    RndMesh *mMesh; // 0x68
+    RndMat *mMats[UIComponent::kNumStates]; // 0x6c
     int mCurrent; // 0x80
     int mNumSteps; // 0x84
     bool mVertical; // 0x88

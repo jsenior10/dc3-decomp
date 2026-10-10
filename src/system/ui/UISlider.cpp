@@ -12,7 +12,9 @@
 #include "utl/BinStream.h"
 #include "utl/Symbol.h"
 
-UISlider::UISlider() : mSliderResource(this), mCurrent(0), mNumSteps(10), mVertical(0) {}
+UISlider::UISlider()
+    : mResourceDir(this), mCurrent(0), mNumSteps(10), mVertical(0) {
+}
 
 BEGIN_HANDLERS(UISlider)
     HANDLE_MESSAGE(ButtonDownMsg)
@@ -34,7 +36,7 @@ BEGIN_HANDLERS(UISlider)
 END_HANDLERS
 
 BEGIN_PROPSYNCS(UISlider)
-    SYNC_PROP_MODIFY(slider_resource, mSliderResource, Update())
+    SYNC_PROP_MODIFY(slider_resource, mResourceDir, Update())
     SYNC_PROP(vertical, mVertical)
     SYNC_SUPERCLASS(ScrollSelect)
     SYNC_SUPERCLASS(UIComponent)
@@ -43,7 +45,7 @@ END_PROPSYNCS
 BEGIN_SAVES(UISlider)
     SAVE_REVS(3, 0)
     SAVE_SUPERCLASS(UIComponent)
-    bs << mSliderResource;
+    bs << mResourceDir;
     bs << mSelectToScroll;
     bs << mVertical;
 END_SAVES
@@ -54,7 +56,7 @@ BEGIN_COPYS(UISlider)
     BEGIN_COPYING_MEMBERS_FROM(c)
         COPY_MEMBER(mSelectToScroll)
         COPY_MEMBER(mVertical)
-        COPY_MEMBER(mSliderResource)
+        COPY_MEMBER(mResourceDir)
     END_COPYING_MEMBERS
 END_COPYS
 
@@ -75,7 +77,7 @@ void UISlider::PreLoad(BinStream &bs) {
     ASSERT_REVS(3, 0);
     UIComponent::PreLoad(d.stream);
     if (d.rev >= 3) {
-        d >> mSliderResource;
+        d >> mResourceDir;
     }
     d.PushRev(this);
 }
@@ -83,7 +85,7 @@ void UISlider::PreLoad(BinStream &bs) {
 void UISlider::PostLoad(BinStream &bs) {
     BinStreamRev d(bs, bs.PopRev(this));
     UIComponent::PostLoad(d.stream);
-    mSliderResource.PostLoad(nullptr);
+    mResourceDir.PostLoad(nullptr);
     if (d.rev > 0) {
         d >> mSelectToScroll;
     }
@@ -95,22 +97,22 @@ void UISlider::PostLoad(BinStream &bs) {
 
 void UISlider::DrawShowing() {
     SyncSlider();
-    if (unk68) {
-        unk68->SetMat(unk6c[DrawState(this)]);
+    if (mMesh) {
+        mMesh->SetMat(mMats[DrawState(this)]);
     }
-    if (mSliderResource) {
-        mSliderResource->DrawShowing();
+    if (mResourceDir) {
+        mResourceDir->DrawShowing();
     }
 }
 
 RndDrawable *UISlider::CollideShowing(const Segment &s, float &fl, Plane &pl) {
     SyncSlider();
-    return mSliderResource->CollideShowing(s, fl, pl) ? this : nullptr;
+    return mResourceDir->CollideShowing(s, fl, pl) ? this : nullptr;
 }
 
 int UISlider::CollidePlane(const Plane &pl) {
     SyncSlider();
-    return mSliderResource->CollidePlane(pl);
+    return mResourceDir->CollidePlane(pl);
 }
 
 void UISlider::Enter() {
@@ -132,13 +134,13 @@ void UISlider::SetSelectedAux(int i) { SetCurrent(i); }
 void UISlider::OldResourcePreload(BinStream &bs) {
     char buf[256];
     bs.ReadString(buf, 256);
-    mSliderResource.SetName(buf, true);
+    mResourceDir.SetName(buf, true);
 }
 
 void UISlider::SyncSlider() {
-    if (mSliderResource) {
-        mSliderResource->SetFrame(Frame(), 1.0f);
-        mSliderResource->SetWorldXfm(WorldXfm());
+    if (mResourceDir) {
+        mResourceDir->SetFrame(Frame(), 1.0f);
+        mResourceDir->SetWorldXfm(WorldXfm());
     }
 }
 
@@ -168,21 +170,21 @@ void UISlider::Init() { REGISTER_OBJ_FACTORY(UISlider) }
 void UISlider::Update() {
     static Symbol mesh("mesh");
     static Symbol mats("mats");
-    unk68 = nullptr;
+    mMesh = nullptr;
     for (int i = 0; i < UIComponent::kNumStates; i++) {
-        unk6c[i] = nullptr;
+        mMats[i] = nullptr;
     }
-    if (TypeDef() && mSliderResource) {
+    if (TypeDef() && mResourceDir) {
         DataArray *meshArr = TypeDef()->FindArray(mesh, false);
         if (meshArr) {
-            unk68 = mSliderResource->Find<RndMesh>(meshArr->Str(1));
+            mMesh = mResourceDir->Find<RndMesh>(meshArr->Str(1));
         }
         DataArray *matArr = TypeDef()->FindArray(mats, false);
         if (matArr) {
             for (int i = 1; i < matArr->Size(); i++) {
                 DataArray *curArr = matArr->Array(i);
                 UIComponent::State state = SymToUIComponentState(curArr->Sym(0));
-                unk6c[state] = mSliderResource->Find<RndMat>(curArr->Str(1));
+                mMats[state] = mResourceDir->Find<RndMat>(curArr->Str(1));
             }
         }
     }
