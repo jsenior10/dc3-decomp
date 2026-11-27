@@ -158,7 +158,8 @@ bool SongSequence::DoNext(bool even_if_worlds_not_loaded, bool forced) {
     static Symbol holla_back("holla_back");
     static Symbol mind_control("mind_control");
     m_HaveReenteredCharacters = false;
-    int num_Entries = m_Entries.size();
+    const std::vector<Entry> *entries = &m_Entries;
+    int num_Entries = entries->size();
     if (num_Entries == 0)
         return true;
     bool isLoaded = TheGame->IsLoaded();
@@ -173,33 +174,30 @@ bool SongSequence::DoNext(bool even_if_worlds_not_loaded, bool forced) {
             return num_Entries <= m_Current;
         }
     }
-    if (!forced && m_Current >= 0) {
-        if (TheHamProvider->Property(in_campaign_era_intro)->Int()) {
-            static Symbol num_stars("num_stars");
-            const DataNode *prop = TheGamePanel->Property(num_stars, false);
-            int stars;
-            if (prop) {
-                stars = prop->Float();
-            } else {
-                stars = 0;
-            }
-            m_Entries[m_Current].stars = stars;
-            PropertyEventProvider *p0 = TheGameData->Player(0)->Provider();
-            PropertyEventProvider *p1 = TheGameData->Player(1)->Provider();
-            m_Entries[m_Current].total_score =
-                p0->Property("score")->Int() + p1->Property("score")->Int();
-            CampaignPerformer *campaignPerf =
-                static_cast<CampaignPerformer *>(MetaPerformer::Current());
-            campaignPerf->UpdateEraSong(
-                campaignPerf->GetDifficulty(),
-                campaignPerf->Era(),
-                m_Entries[0].song_audio,
-                m_Entries[0].stars
-            );
-            campaignPerf->TriggerSongCompletion(
-                m_Entries[0].total_score, m_Entries[0].stars
-            );
+    if (!forced && m_Current >= 0
+        && TheHamProvider->Property(in_campaign_era_intro)->Int()) {
+        static Symbol num_stars("num_stars");
+        const DataNode *prop = TheGamePanel->Property(num_stars, false);
+        int stars;
+        if (prop) {
+            stars = prop->Float();
+        } else {
+            stars = 0;
         }
+        m_Entries[m_Current].stars = stars;
+        PropertyEventProvider *p0 = TheGameData->Player(0)->Provider();
+        PropertyEventProvider *p1 = TheGameData->Player(1)->Provider();
+        m_Entries[m_Current].total_score =
+            p0->Property("score")->Int() + p1->Property("score")->Int();
+        CampaignPerformer *campaignPerf =
+            static_cast<CampaignPerformer *>(MetaPerformer::Current());
+        campaignPerf->UpdateEraSong(
+            campaignPerf->GetDifficulty(),
+            campaignPerf->Era(),
+            m_Entries[0].song_audio,
+            m_Entries[0].stars
+        );
+        campaignPerf->TriggerSongCompletion(m_Entries[0].total_score, m_Entries[0].stars);
     }
     if (!forced && m_Entries[m_Current].mode == mind_control) {
         CampaignPerformer *campaignPerf =
@@ -207,7 +205,14 @@ bool SongSequence::DoNext(bool even_if_worlds_not_loaded, bool forced) {
         campaignPerf->SetCampaignMindControlComplete(true);
     }
 
-    if (++m_Current >= (int)m_Entries.size() || forced) {
+    ++m_Current;
+    std::vector<Entry>::const_iterator first = entries->begin(); // todo: ask if this is
+                                                                 // better as an inline
+                                                                 // func
+    std::vector<Entry>::const_iterator last = entries->end();
+    int num = last - first;
+
+    if (m_Current >= num || forced) {
         MILO_LOG("SongSequence::DoNext: terminating. forced=%s\n", forced ? "T" : "F");
         static Symbol holla_back("holla_back");
         Symbol mode = TheGameMode->Property(gameplay_mode)->Sym();
