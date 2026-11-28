@@ -83,6 +83,49 @@ DataNode OptionsPanel::OnMsg(SingleItemEnumCompleteMsg const &msg) {
     return 0;
 }
 
+FORCEINLINE bool GetTokenRedemptionResultHelper(
+    int res,
+    Symbol &err,
+    const Symbol &ready,
+    const Symbol &error,
+    const Symbol &not_found,
+    const Symbol &other_player,
+    const Symbol &purchased,
+    const Symbol &too_early,
+    const Symbol &too_late,
+    const Symbol &no_net
+) {
+    switch (res) {
+    case 0xA0002:
+    case 0xA0005:
+    case 0xA0007:
+        err = ready;
+        return true;
+    case 0xA0006:
+        err = purchased;
+        return true;
+    case 0x800A0003:
+        err = not_found;
+        return false;
+    case 0x800A0005:
+        err = other_player;
+        return false;
+    case 0x800A0008:
+        err = too_late;
+        return false;
+    case 0x800A0009:
+        err = too_early;
+        return false;
+    default:
+        if (!TheRockCentral.IsOnline()) {
+            err = no_net;
+            return false;
+        }
+        err = error;
+        return false;
+    }
+}
+
 DataNode OptionsPanel::OnMsg(RCJobCompleteMsg const &msg) {
     if (msg.Job() == mTokenJob) {
         MILO_LOG("Token: server response: %s\n", mTokenJob->GetResponseString());
@@ -97,51 +140,19 @@ DataNode OptionsPanel::OnMsg(RCJobCompleteMsg const &msg) {
         static Symbol token_redemption_too_late("token_redemption_too_late");
         static Symbol leaderboard_no_net("leaderboard_no_net");
         mTokenJob->GetRedeemTokenData(res, offer);
-        bool success;
         Symbol error;
-        switch (res) {
-        case 0xA0002:
-            error = token_redemption_ready;
-            success = true;
-            break;
-        case 0xA0005:
-            error = token_redemption_ready;
-            success = true;
-            break;
-        case 0xA0006:
-            error = token_redemption_purchased;
-            success = true;
-            break;
-        case 0xA0007:
-            error = token_redemption_ready;
-            success = true;
-            break;
-        case 0x800A0003:
-            error = token_redemption_not_found;
-            success = false;
-            break;
-        case 0x800A0005:
-            error = token_redemption_other_player;
-            success = false;
-            break;
-        case 0x800A0008:
-            error = token_redemption_too_late;
-            success = false;
-            break;
-        case 0x800A0009:
-            error = token_redemption_too_early;
-            success = false;
-            break;
-        default:
-            bool online = TheRockCentral.IsOnline();
-            success = false;
-            if (!online) {
-                error = leaderboard_no_net;
-            } else {
-                error = token_redemption_error;
-            }
-            break;
-        }
+        bool success = GetTokenRedemptionResultHelper(
+            res,
+            error,
+            token_redemption_ready,
+            token_redemption_error,
+            token_redemption_not_found,
+            token_redemption_other_player,
+            token_redemption_purchased,
+            token_redemption_too_early,
+            token_redemption_too_late,
+            leaderboard_no_net
+        );
         static TokenRedeemedMsg msg(true, String(""), token_redemption_ready);
         msg.SetSuccess(success);
         msg.SetOfferString(offer);
