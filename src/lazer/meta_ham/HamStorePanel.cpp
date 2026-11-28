@@ -571,7 +571,7 @@ StoreError HamStorePanel::UpdateOffers(std::list<EnumProduct> const &prods, bool
             FOREACH (product, prods) {
                 if (product->mOfferID == it->mOfferId) {
                     check = true;
-                    it->mIsOwned = (product->mPurchased != 0);
+                    it->mIsOwned = check && (product->mPurchased != 0);
                     break;
                 }
             }
