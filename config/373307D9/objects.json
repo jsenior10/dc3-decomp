@@ -92,7 +92,7 @@
             "lazer/meta_ham/HamStarsDisplay.cpp": "Matching",
             "lazer/meta_ham/HamStoreFilterProvider.cpp": "Matching",
             "lazer/meta_ham/HamStoreOffer.cpp": "Matching",
-            "lazer/meta_ham/HamStorePanel.cpp": "NonMatching",
+            "lazer/meta_ham/HamStorePanel.cpp": "Matching",
             "lazer/meta_ham/HamStoreProvider.cpp": "Matching",
             "lazer/meta_ham/HamUI.cpp": "Matching",
             "lazer/meta_ham/HelpBarPanel.cpp": "Matching",
