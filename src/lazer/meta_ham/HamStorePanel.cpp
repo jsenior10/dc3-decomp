@@ -545,6 +545,7 @@ DataNode HamStorePanel::OnMsg(RCJobCompleteMsg const &msg) {
         if (!msg.Success()) {
             MILO_LOG("[HamStorePanel::OnMsg] Cart failed to add song.\n");
             ExitError(kStoreErrorStoreServer);
+            return 1;
         } else {
             mPendingAdds.pop_front();
             if (!mPendingAdds.empty()) {
@@ -557,6 +558,8 @@ DataNode HamStorePanel::OnMsg(RCJobCompleteMsg const &msg) {
     } else if (msg.Job() == mCartJobs[2]) {
         if (!msg.Success()) {
             MILO_LOG("[HamStorePanel::OnMsg] Cart failed to clear.\n");
+            ExitError(kStoreErrorStoreServer);
+            return 1;
         } else {
             MILO_LOG("[HamStorePanel::OnMsg] Cart emptied successfully.\n");
         }
